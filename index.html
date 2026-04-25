@@ -303,14 +303,18 @@
 
     /* Responsive */
     .mobile-close { display: none; margin-left: auto; cursor: pointer; color: var(--text-muted); font-size: 1.2rem; }
+    #menu-toggle { display: none; font-size: 1.5rem; cursor: pointer; color: var(--text-main); margin-right: 15px; }
+    
     @media (max-width: 768px) {
       .sidebar { transform: translateX(-100%); transition: 0.3s; z-index: 1000; box-shadow: 4px 0 24px rgba(0,0,0,0.5); }
       .sidebar.open { transform: translateX(0); }
       .mobile-close { display: block; }
-      .main-content { margin-left: 0; }
+      .main-content { margin-left: 0; padding: 20px; }
       #menu-toggle { display: block; }
+      
+      .header { flex-wrap: wrap; gap: 10px; }
+      #date-display { font-size: 0.8rem; }
     }
-    #menu-toggle { display: none; font-size: 1.5rem; cursor: pointer; color: var(--text-main); }
     
     /* Error/Success Messages */
     .alert {
