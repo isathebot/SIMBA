@@ -209,28 +209,32 @@
     /* Main Content */
     .main-content {
       margin-left: var(--sidebar-w);
-      padding: 32px;
-      min-height: 100vh;
-      overflow-y: auto;
+      padding: 32px 32px 0 32px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
 
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 32px;
+      margin-bottom: 24px;
+      flex-shrink: 0;
     }
     .header h1 { font-size: 1.8rem; font-weight: 700; color: var(--text-main); }
 
-    .view-section { display: none; animation: fadeIn 0.4s ease-out; }
-    .view-section.active { display: block; }
+    .view-section { display: none; animation: fadeIn 0.4s ease-out; flex: 1; flex-direction: column; overflow-y: auto; padding-bottom: 32px; }
+    .view-section.active { display: flex; }
 
     /* Cards & Stats */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 24px;
-      margin-bottom: 32px;
+      margin-bottom: 24px;
+      flex-shrink: 0;
     }
 
     .stat-card {
@@ -446,16 +450,16 @@
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px;">
-          <div class="card">
-            <h3 class="card-title" style="font-size: 1rem;"><i class="fa-solid fa-chart-pie"></i> Status Aset</h3>
-            <div style="position: relative; height: 300px; width: 100%; display: flex; justify-content: center;">
+        <div style="flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; min-height: 0;">
+          <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column;">
+            <h3 class="card-title" style="font-size: 1rem; flex-shrink: 0;"><i class="fa-solid fa-chart-pie"></i> Status Aset</h3>
+            <div style="position: relative; flex: 1; width: 100%; display: flex; justify-content: center; min-height: 0;">
               <canvas id="donutChart"></canvas>
             </div>
           </div>
-          <div class="card">
-            <h3 class="card-title" style="font-size: 1rem;"><i class="fa-solid fa-chart-line"></i> Trend Peminjaman (6 Bulan)</h3>
-            <div style="position: relative; height: 300px; width: 100%;">
+          <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column;">
+            <h3 class="card-title" style="font-size: 1rem; flex-shrink: 0;"><i class="fa-solid fa-chart-line"></i> Trend Peminjaman (6 Bulan)</h3>
+            <div style="position: relative; flex: 1; width: 100%; min-height: 0;">
               <canvas id="lineChart"></canvas>
             </div>
           </div>
@@ -690,8 +694,13 @@
       if (user.role === 'Pegawai') {
         document.getElementById('nav-peminjaman').style.display = 'flex';
         document.getElementById('nav-penyewaan').style.display = 'flex';
-      } else if (user.role === 'Pengelola BMN' || user.role === 'Pengelola Ruang') {
+      } else if (user.role === 'Pengelola BMN') {
         document.getElementById('nav-verifikasi').style.display = 'flex';
+        document.getElementById('nav-verifikasi').innerHTML = '<i class="fa-solid fa-clipboard-check"></i> Verifikasi Barang';
+        document.getElementById('nav-laporan').style.display = 'flex';
+      } else if (user.role === 'Pengelola Ruang') {
+        document.getElementById('nav-verifikasi').style.display = 'flex';
+        document.getElementById('nav-verifikasi').innerHTML = '<i class="fa-solid fa-clipboard-check"></i> Verifikasi Ruangan';
         document.getElementById('nav-laporan').style.display = 'flex';
       } else if (user.role === 'Kepala Kantor') {
         document.getElementById('nav-peminjaman').style.display = 'flex';
@@ -730,7 +739,7 @@
         'dashboard': 'Dashboard Overview',
         'peminjaman': 'Peminjaman Barang',
         'penyewaan': 'Penyewaan Ruang Studio',
-        'verifikasi': 'Verifikasi Permohonan',
+        'verifikasi': currentUser.role === 'Pengelola BMN' ? 'Verifikasi Peminjaman Barang' : (currentUser.role === 'Pengelola Ruang' ? 'Verifikasi Penyewaan Ruang' : 'Verifikasi Permohonan'),
         'laporan': 'Laporan & Log',
         'monitoring': 'Monitoring Kegiatan'
       };
