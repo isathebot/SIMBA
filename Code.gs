@@ -155,7 +155,9 @@ function submitPenyewaan(data) {
  * Helper insert data
  */
 function insertToSheet(sheetCandidates, data) {
+  const lock = LockService.getScriptLock();
   try {
+    lock.waitLock(30000); // Tunggu hingga 30 detik agar proses antrean selesai
     const ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
     let sheet = null;
     for (let name of sheetCandidates) {
@@ -186,6 +188,8 @@ function insertToSheet(sheetCandidates, data) {
     return { success: true, message: "Pengajuan berhasil dikirim!" };
   } catch (e) {
     return { success: false, message: "Error: " + e.message };
+  } finally {
+    lock.releaseLock();
   }
 }
 
@@ -193,7 +197,9 @@ function insertToSheet(sheetCandidates, data) {
  * Verifikasi (Approve/Reject)
  */
 function updateStatus(sheetType, rowIndex, status, notes) {
+  const lock = LockService.getScriptLock();
   try {
+    lock.waitLock(30000);
     const ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
     let sheetCandidates = sheetType === "peminjaman" 
       ? ["Peminjaman", "Riwayat Peminjaman", "Peminjaman Barang"] 
@@ -235,5 +241,7 @@ function updateStatus(sheetType, rowIndex, status, notes) {
     return { success: true, message: "Status berhasil diperbarui." };
   } catch (e) {
     return { success: false, message: "Error: " + e.message };
+  } finally {
+    lock.releaseLock();
   }
 }
