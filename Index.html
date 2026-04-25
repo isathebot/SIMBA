@@ -469,7 +469,7 @@
         <div class="card">
           <h3 class="card-title">Formulir Peminjaman Barang</h3>
           <div id="alert-peminjaman" class="alert"></div>
-          <div class="stats-grid" style="grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 24px;">
             <div class="form-group">
               <label>Nama Pemohon</label>
               <input type="text" id="peminjaman-nama" class="form-control" placeholder="Nama Lengkap">
@@ -506,7 +506,7 @@
         <div class="card">
           <h3 class="card-title">Formulir Penyewaan Ruang Studio</h3>
           <div id="alert-penyewaan" class="alert"></div>
-          <div class="stats-grid" style="grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 24px;">
             <div class="form-group">
               <label>Nama Pemohon</label>
               <input type="text" id="penyewaan-nama" class="form-control" placeholder="Nama Lengkap">
@@ -711,11 +711,11 @@
         document.getElementById('nav-laporan').style.display = 'flex';
         document.getElementById('nav-monitoring').style.display = 'flex';
       }
-      // Pre-fill forms
-      document.getElementById('peminjaman-nama').value = user.name;
-      document.getElementById('peminjaman-nip').value = user.nip;
-      document.getElementById('penyewaan-nama').value = user.name;
-      document.getElementById('penyewaan-nip').value = user.nip;
+      // Pre-fill forms (dihapus sesuai permintaan agar tidak muncul User/admin)
+      document.getElementById('peminjaman-nama').value = "";
+      document.getElementById('peminjaman-nip').value = "";
+      document.getElementById('penyewaan-nama').value = "";
+      document.getElementById('penyewaan-nip').value = "";
       
       loadDashboardData();
       setTimeout(renderCharts, 500); // Give time for UI to render
