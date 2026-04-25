@@ -326,7 +326,8 @@
   <div id="login-screen">
     <div class="login-box glass">
       <div class="login-logo"><i class="fa-solid fa-boxes-stacked"></i></div>
-      <h2>SIMBA BBPK Jakarta</h2>
+      <h2>SIMBA</h2>
+      <h3 style="color: var(--text-main); margin-bottom: 8px;">BBPK Jakarta</h3>
       <p>Sistem Monitoring BMN Aktif</p>
       
       <div id="login-alert" class="alert"></div>
@@ -343,8 +344,8 @@
         <span class="btn-text">Masuk</span>
         <div class="loader" id="login-loader"></div>
       </button>
-      <div style="margin-top:20px;font-size:0.8rem;color:var(--text-muted)">
-        Hint role login dummy (jika db kosong):<br> nip: <b>admin</b>, <b>pegawai</b>, <b>pengelola</b>, <b>kepala</b>
+        Hint login: Masukkan NIP Anda. (Default Password: 12345@)<br>
+        <i>Role akan disesuaikan otomatis berdasarkan NIP.</i>
       </div>
     </div>
   </div>
@@ -367,31 +368,26 @@
       </div>
       
       <div class="nav-menu">
-        <a class="nav-item active" onclick="switchView('dashboard')">
+        <a class="nav-item active" id="nav-dashboard" onclick="switchView('dashboard')">
           <i class="fa-solid fa-chart-pie"></i> Dashboard
         </a>
-        <a class="nav-item" onclick="switchView('peminjaman')">
+        <a class="nav-item" id="nav-peminjaman" onclick="switchView('peminjaman')">
           <i class="fa-solid fa-laptop"></i> Peminjaman Barang
         </a>
-        <a class="nav-item" onclick="switchView('penyewaan')">
+        <a class="nav-item" id="nav-penyewaan" onclick="switchView('penyewaan')">
           <i class="fa-solid fa-door-open"></i> Penyewaan Ruang
         </a>
         
         <!-- Role Specific Menus -->
-        <div id="menu-verifikasi" style="display:none;">
-          <a class="nav-item" onclick="switchView('verifikasi')">
-            <i class="fa-solid fa-clipboard-check"></i> Verifikasi
-          </a>
-          <a class="nav-item" onclick="switchView('laporan')">
-            <i class="fa-solid fa-file-lines"></i> Laporan & Log
-          </a>
-        </div>
-        
-        <div id="menu-monitoring" style="display:none;">
-          <a class="nav-item" onclick="switchView('monitoring')">
-            <i class="fa-solid fa-desktop"></i> Monitoring
-          </a>
-        </div>
+        <a class="nav-item" id="nav-verifikasi" style="display:none;" onclick="switchView('verifikasi')">
+          <i class="fa-solid fa-clipboard-check"></i> Verifikasi
+        </a>
+        <a class="nav-item" id="nav-laporan" style="display:none;" onclick="switchView('laporan')">
+          <i class="fa-solid fa-file-lines"></i> Laporan & Log
+        </a>
+        <a class="nav-item" id="nav-monitoring" style="display:none;" onclick="switchView('monitoring')">
+          <i class="fa-solid fa-desktop"></i> Monitoring
+        </a>
       </div>
       
       <div style="padding: 24px;">
@@ -640,11 +636,28 @@
       document.getElementById('user-avatar').innerText = user.name.charAt(0).toUpperCase();
 
       // Setup Roles Menu
-      if (['Admin', 'Pengelola BMN', 'Kepala Kantor'].includes(user.role)) {
-        document.getElementById('menu-verifikasi').style.display = 'block';
-      }
-      if (['Admin', 'Kepala Kantor'].includes(user.role)) {
-        document.getElementById('menu-monitoring').style.display = 'block';
+      document.getElementById('nav-peminjaman').style.display = 'none';
+      document.getElementById('nav-penyewaan').style.display = 'none';
+      document.getElementById('nav-verifikasi').style.display = 'none';
+      document.getElementById('nav-laporan').style.display = 'none';
+      document.getElementById('nav-monitoring').style.display = 'none';
+
+      if (user.role === 'Pegawai') {
+        document.getElementById('nav-peminjaman').style.display = 'flex';
+        document.getElementById('nav-penyewaan').style.display = 'flex';
+      } else if (user.role === 'Pengelola BMN' || user.role === 'Pengelola Ruang') {
+        document.getElementById('nav-verifikasi').style.display = 'flex';
+        document.getElementById('nav-laporan').style.display = 'flex';
+      } else if (user.role === 'Kepala Kantor') {
+        document.getElementById('nav-peminjaman').style.display = 'flex';
+        document.getElementById('nav-penyewaan').style.display = 'flex';
+        document.getElementById('nav-monitoring').style.display = 'flex';
+      } else if (user.role === 'Admin') {
+        document.getElementById('nav-peminjaman').style.display = 'flex';
+        document.getElementById('nav-penyewaan').style.display = 'flex';
+        document.getElementById('nav-verifikasi').style.display = 'flex';
+        document.getElementById('nav-laporan').style.display = 'flex';
+        document.getElementById('nav-monitoring').style.display = 'flex';
       }
       
       loadDashboardData();
@@ -676,28 +689,57 @@
     }
 
     function loadDashboardData() {
+      // Default Mock Data
+      const defaultBarang = [
+        "Laptop (3100102002)", "PC (3100102001)", "Printer (3100203003)", "Penghancur Kertas (3050105015)",
+        "Kamera (3050206020)", "Mobil Dinas (Avanza) (3020102003)", "Mobil Dinas (Innova) (3020101003)",
+        "Micro Bus (HiAce/Hino L300) (3020102002)", "Mobil Ambulance (3020105001)", "Tablet PC (3100102009)",
+        "Televisi (3050206002)", "Microphone (3060101036)", "Head Set (3060102118)", "Drone (3060102167)",
+        "Kamera Video (3050206020)", "LCD (3050105048)", "Camera Conference (3060102165)",
+        "Alat Kesehatan (Mannequin, Tensi Darah, dll) (XXXXXXX)", "Alat Peraga (XXXXXXX)", "Alat Olahraga (XXXXXXX)", "Pointer (XXXXXXX)"
+      ];
+      
+      const defaultRuang = [
+        "Studio 1", "Studio 2", "Studio 3", "Studio 4", "Studio ULP 1", 
+        "Studio ULP 2", "Studio ULP 3", "Zoom Pod 1", "Zoom Pod 2", "Zoom Pod 3"
+      ];
+
+      // Build options
+      let barangHtml = '<option value="">Pilih Barang...</option>';
+      defaultBarang.forEach(b => barangHtml += `<option value="${b}">${b}</option>`);
+      
+      let ruangHtml = '<option value="">Pilih Ruang...</option>';
+      defaultRuang.forEach(r => ruangHtml += `<option value="${r}">${r}</option>`);
+
+      document.getElementById('select-barang').innerHTML = barangHtml;
+      document.getElementById('select-ruang').innerHTML = ruangHtml;
+
       // Mock data load or GAS load
       if(IS_GAS) {
         google.script.run.withSuccessHandler(data => {
           dataBarang = data;
-          document.getElementById('stat-barang').innerText = data.length || 0;
-          let select = document.getElementById('select-barang');
-          select.innerHTML = '<option value="">Pilih Barang...</option>';
-          data.forEach(item => {
-            let nama = item['Nama Barang'] || item['nama_barang'] || item['Nama'];
-            if(nama) select.innerHTML += `<option value="${nama}">${nama}</option>`;
-          });
+          document.getElementById('stat-barang').innerText = data.length || defaultBarang.length;
+          if (data.length > 0) {
+            let select = document.getElementById('select-barang');
+            select.innerHTML = '<option value="">Pilih Barang...</option>';
+            data.forEach(item => {
+              let nama = item['Nama Barang'] || item['nama_barang'] || item['Nama'];
+              if(nama) select.innerHTML += `<option value="${nama}">${nama}</option>`;
+            });
+          }
         }).getBarang();
 
         google.script.run.withSuccessHandler(data => {
           dataRuang = data;
-          document.getElementById('stat-ruang').innerText = data.length || 0;
-          let select = document.getElementById('select-ruang');
-          select.innerHTML = '<option value="">Pilih Ruang...</option>';
-          data.forEach(item => {
-            let nama = item['Nama Ruang'] || item['nama_ruang'] || item['Nama'];
-            if(nama) select.innerHTML += `<option value="${nama}">${nama}</option>`;
-          });
+          document.getElementById('stat-ruang').innerText = data.length || defaultRuang.length;
+          if (data.length > 0) {
+            let select = document.getElementById('select-ruang');
+            select.innerHTML = '<option value="">Pilih Ruang...</option>';
+            data.forEach(item => {
+              let nama = item['Nama Ruang'] || item['nama_ruang'] || item['Nama'];
+              if(nama) select.innerHTML += `<option value="${nama}">${nama}</option>`;
+            });
+          }
         }).getRuang();
         
         // Mock load table verifikasi
@@ -705,10 +747,8 @@
         document.querySelector('#table-laporan tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;">Belum ada log</td></tr>`;
       } else {
         // Mock UI setup
-        document.getElementById('stat-barang').innerText = '120';
-        document.getElementById('stat-ruang').innerText = '8';
-        document.getElementById('select-barang').innerHTML = '<option>Laptop Asus ROG</option><option>Proyektor Epson</option>';
-        document.getElementById('select-ruang').innerHTML = '<option>Studio Podcast A</option><option>Ruang Rapat B</option>';
+        document.getElementById('stat-barang').innerText = defaultBarang.length;
+        document.getElementById('stat-ruang').innerText = defaultRuang.length;
         document.querySelector('#table-verifikasi tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;">Tidak ada permohonan</td></tr>`;
         document.querySelector('#table-laporan tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;">Belum ada log</td></tr>`;
       }
