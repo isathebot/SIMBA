@@ -626,17 +626,29 @@
     document.getElementById('date-display').innerText = d.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     document.getElementById('dash-date').innerText = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
-    // Mock Backend (for local UI testing without GAS)
-    const IS_GAS = typeof google !== 'undefined' && google.script;
+    // API Call Helper for Vercel Serverless
+    async function apiCall(action, payload) {
+      try {
+        const res = await fetch('/api/sheets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, payload })
+        });
+        return await res.json();
+      } catch (e) {
+        return { success: false, message: 'Gagal terhubung ke server Vercel API.' };
+      }
+    }
     
     function showAlert(id, msg, type) {
       const el = document.getElementById(id);
       el.className = `alert ${type}`;
       el.innerText = msg;
+      el.style.display = 'block';
       setTimeout(() => { el.style.display = 'none'; el.className = 'alert'; }, 5000);
     }
 
-    function handleLogin() {
+    async function handleLogin() {
       const nip = document.getElementById('nip').value;
       const pass = document.getElementById('password').value;
       const btnText = document.querySelector('#btn-login .btn-text');
@@ -647,29 +659,13 @@
       btnText.style.display = 'none';
       loader.style.display = 'block';
 
-      if (IS_GAS) {
-        google.script.run.withSuccessHandler(res => {
-          btnText.style.display = 'block'; loader.style.display = 'none';
-          if(res.success) {
-            setupUserSession(res);
-          } else {
-            showAlert('login-alert', res.message, 'error');
-          }
-        }).login(nip, pass);
+      const res = await apiCall('login', { nip, password: pass });
+      
+      btnText.style.display = 'block'; loader.style.display = 'none';
+      if(res.success) {
+        setupUserSession(res);
       } else {
-        // Fallback mock
-        setTimeout(() => {
-          btnText.style.display = 'block'; loader.style.display = 'none';
-          if(pass !== '12345@') return showAlert('login-alert', 'Password salah', 'error');
-          let role = "Pegawai";
-          if(nip === 'admin') role = 'Admin';
-          else if(nip === 'kepala') role = 'Kepala Kantor';
-          else if(nip === 'bmn') role = 'Pengelola BMN';
-          else if(nip === 'lobby') role = 'Pengelola Ruang';
-          else if(nip !== 'pegawai') return showAlert('login-alert', 'User tidak ditemukan', 'error');
-          
-          setupUserSession({success: true, role: role, name: 'User ' + nip, nip: nip});
-        }, 1000);
+        showAlert('login-alert', res.message, 'error');
       }
     }
 
@@ -747,72 +743,43 @@
     }
 
     function loadDashboardData() {
-      // Default Mock Data
-      const defaultBarang = [
-        "Laptop (3100102002)", "PC (3100102001)", "Printer (3100203003)", "Penghancur Kertas (3050105015)",
-        "Kamera (3050206020)", "Mobil Dinas (Avanza) (3020102003)", "Mobil Dinas (Innova) (3020101003)",
-        "Micro Bus (HiAce/Hino L300) (3020102002)", "Mobil Ambulance (3020105001)", "Tablet PC (3100102009)",
-        "Televisi (3050206002)", "Microphone (3060101036)", "Head Set (3060102118)", "Drone (3060102167)",
-        "Kamera Video (3050206020)", "LCD (3050105048)", "Camera Conference (3060102165)",
-        "Alat Kesehatan (Mannequin, Tensi Darah, dll) (XXXXXXX)", "Alat Peraga (XXXXXXX)", "Alat Olahraga (XXXXXXX)", "Pointer (XXXXXXX)"
-      ];
+      document.querySelector('#table-verifikasi tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;">Memuat data...</td></tr>`;
+      document.querySelector('#table-laporan tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;">Memuat data...</td></tr>`;
       
-      const defaultRuang = [
-        "Studio 1", "Studio 2", "Studio 3", "Studio 4", "Studio ULP 1", 
-        "Studio ULP 2", "Studio ULP 3", "Zoom Pod 1", "Zoom Pod 2", "Zoom Pod 3"
-      ];
-
-      // Build options
-      let barangHtml = '<option value="">Pilih Barang...</option>';
-      defaultBarang.forEach(b => barangHtml += `<option value="${b}">${b}</option>`);
+      apiCall('getBarang', {}).then(res => {
+        if(res && res.success && res.data) {
+          dataBarang = res.data;
+          document.getElementById('stat-barang').innerText = res.data.length || "0";
+          let select = document.getElementById('select-barang');
+          select.innerHTML = '<option value="">Pilih Barang...</option>';
+          res.data.forEach(item => {
+            let nama = item['Nama Barang'] || item['nama_barang'] || item['Nama'];
+            if(nama) select.innerHTML += `<option value="${nama}">${nama}</option>`;
+          });
+        }
+      });
       
-      let ruangHtml = '<option value="">Pilih Ruang...</option>';
-      defaultRuang.forEach(r => ruangHtml += `<option value="${r}">${r}</option>`);
-
-      document.getElementById('select-barang').innerHTML = barangHtml;
-      document.getElementById('select-ruang').innerHTML = ruangHtml;
-
-      // Mock data load or GAS load
-      if(IS_GAS) {
-        google.script.run.withSuccessHandler(data => {
-          dataBarang = data;
-          document.getElementById('stat-barang').innerText = data.length || defaultBarang.length;
-          if (data.length > 0) {
-            let select = document.getElementById('select-barang');
-            select.innerHTML = '<option value="">Pilih Barang...</option>';
-            data.forEach(item => {
-              let nama = item['Nama Barang'] || item['nama_barang'] || item['Nama'];
-              if(nama) select.innerHTML += `<option value="${nama}">${nama}</option>`;
-            });
-          }
-        }).getBarang();
-
-        google.script.run.withSuccessHandler(data => {
-          dataRuang = data;
-          document.getElementById('stat-ruang').innerText = data.length || defaultRuang.length;
-          if (data.length > 0) {
-            let select = document.getElementById('select-ruang');
-            select.innerHTML = '<option value="">Pilih Ruang...</option>';
-            data.forEach(item => {
-              let nama = item['Nama Ruang'] || item['nama_ruang'] || item['Nama'];
-              if(nama) select.innerHTML += `<option value="${nama}">${nama}</option>`;
-            });
-          }
-        }).getRuang();
-        
-        // Mock load table verifikasi
+      apiCall('getRuang', {}).then(res => {
+        if(res && res.success && res.data) {
+          dataRuang = res.data;
+          document.getElementById('stat-ruang').innerText = res.data.length || "0";
+          let select = document.getElementById('select-ruang');
+          select.innerHTML = '<option value="">Pilih Ruang...</option>';
+          res.data.forEach(item => {
+            let nama = item['Nama Ruang'] || item['nama_ruang'] || item['Nama'];
+            if(nama) select.innerHTML += `<option value="${nama}">${nama}</option>`;
+          });
+        }
+      });
+      
+      // Keep mock for table items for now, to be implemented fully later
+      setTimeout(() => {
         document.querySelector('#table-verifikasi tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;">Tidak ada permohonan</td></tr>`;
         document.querySelector('#table-laporan tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;">Belum ada log</td></tr>`;
-      } else {
-        // Mock UI setup
-        document.getElementById('stat-barang').innerText = defaultBarang.length;
-        document.getElementById('stat-ruang').innerText = defaultRuang.length;
-        document.querySelector('#table-verifikasi tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;">Tidak ada permohonan</td></tr>`;
-        document.querySelector('#table-laporan tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;">Belum ada log</td></tr>`;
-      }
+      }, 1000);
     }
 
-    function submitPeminjaman() {
+    async function submitPeminjaman() {
       const nama = document.getElementById('peminjaman-nama').value;
       const nipPemohon = document.getElementById('peminjaman-nip').value;
       const brg = document.getElementById('select-barang').value;
@@ -822,19 +789,16 @@
       
       if(!nama || !nipPemohon || !brg || !tglP || !tglK) return showAlert('alert-peminjaman', 'Field Nama, NIP, Barang, dan Tanggal wajib diisi!', 'error');
 
-      const payload = { "NIP": nipPemohon, "Nama": nama, "Barang": brg, "Tujuan": tuju, "Tanggal Pinjam": tglP, "Tanggal Kembali": tglK };
+      const payload = { type: "peminjaman", data: { "NIP": nipPemohon, "Nama": nama, "Barang": brg, "Tujuan": tuju, "Tanggal Pinjam": tglP, "Tanggal Kembali": tglK } };
       
-      if(IS_GAS) {
-        google.script.run.withSuccessHandler(res => {
-          if(res.success) { showAlert('alert-peminjaman', res.message, 'success'); }
-          else showAlert('alert-peminjaman', res.message, 'error');
-        }).submitPeminjaman(payload);
-      } else {
-        showAlert('alert-peminjaman', 'Pengajuan berhasil dikirim (Mock Mode)', 'success');
-      }
+      showAlert('alert-peminjaman', 'Menyimpan pengajuan...', 'pending');
+      const res = await apiCall('submitForm', payload);
+      
+      if(res && res.success) showAlert('alert-peminjaman', res.message, 'success');
+      else showAlert('alert-peminjaman', res ? res.message : 'Error jaringan', 'error');
     }
 
-    function submitPenyewaan() {
+    async function submitPenyewaan() {
       const nama = document.getElementById('penyewaan-nama').value;
       const nipPemohon = document.getElementById('penyewaan-nip').value;
       const ruang = document.getElementById('select-ruang').value;
@@ -844,16 +808,13 @@
       
       if(!nama || !nipPemohon || !ruang || !tglM || !tglS) return showAlert('alert-penyewaan', 'Field Nama, NIP, Ruang, dan Tanggal wajib diisi!', 'error');
 
-      const payload = { "NIP": nipPemohon, "Nama": nama, "Ruang": ruang, "Acara": acara, "Waktu Mulai": tglM, "Waktu Selesai": tglS };
+      const payload = { type: "penyewaan", data: { "NIP": nipPemohon, "Nama": nama, "Ruang": ruang, "Acara": acara, "Waktu Mulai": tglM, "Waktu Selesai": tglS } };
       
-      if(IS_GAS) {
-        google.script.run.withSuccessHandler(res => {
-          if(res.success) { showAlert('alert-penyewaan', res.message, 'success'); }
-          else showAlert('alert-penyewaan', res.message, 'error');
-        }).submitPenyewaan(payload);
-      } else {
-        showAlert('alert-penyewaan', 'Pengajuan berhasil dikirim (Mock Mode)', 'success');
-      }
+      showAlert('alert-penyewaan', 'Menyimpan pengajuan...', 'pending');
+      const res = await apiCall('submitForm', payload);
+      
+      if(res && res.success) showAlert('alert-penyewaan', res.message, 'success');
+      else showAlert('alert-penyewaan', res ? res.message : 'Error jaringan', 'error');
     }
 
     function downloadExcel() {

@@ -1,0 +1,12 @@
+{
+  "name": "simba",
+  "version": "1.0.0",
+  "description": "Sistem Monitoring BMN Aktif",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node api/index.js"
+  },
+  "dependencies": {
+    "googleapis": "^140.0.0"
+  }
+}
