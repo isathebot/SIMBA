@@ -302,9 +302,11 @@
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
     /* Responsive */
+    .mobile-close { display: none; margin-left: auto; cursor: pointer; color: var(--text-muted); font-size: 1.2rem; }
     @media (max-width: 768px) {
-      .sidebar { transform: translateX(-100%); transition: 0.3s; }
+      .sidebar { transform: translateX(-100%); transition: 0.3s; z-index: 1000; box-shadow: 4px 0 24px rgba(0,0,0,0.5); }
       .sidebar.open { transform: translateX(0); }
+      .mobile-close { display: block; }
       .main-content { margin-left: 0; }
       #menu-toggle { display: block; }
     }
@@ -337,11 +339,12 @@
 
       <div class="form-group">
         <label>User</label>
-        <input type="text" id="nip" class="form-control" placeholder="Masukkan User Anda" value="pegawai">
+        <input type="text" id="nip" class="form-control" placeholder="Ketik admin, pegawai, bmn, lobby, atau kepala" value="">
       </div>
-      <div class="form-group">
+      <div class="form-group" style="position:relative;">
         <label>Password</label>
-        <input type="password" id="password" class="form-control" placeholder="Password (12345@)" value="12345@">
+        <input type="password" id="password" class="form-control" placeholder="Ketik password Anda" value="">
+        <i class="fa-solid fa-eye" id="toggle-password" onclick="togglePassword()" style="position:absolute; right:15px; top:42px; cursor:pointer; color:var(--text-muted);"></i>
       </div>
       <button class="btn btn-primary" onclick="handleLogin()" id="btn-login">
         <span class="btn-text">Masuk</span>
@@ -357,6 +360,7 @@
       <div class="sidebar-header">
         <div class="sidebar-brand">
           <i class="fa-solid fa-boxes-stacked"></i> SIMBA
+          <i class="fa-solid fa-xmark mobile-close" onclick="document.getElementById('sidebar').classList.remove('open')"></i>
         </div>
         <div class="user-profile">
           <div class="avatar" id="user-avatar">P</div>
@@ -654,6 +658,20 @@
       setTimeout(() => { el.style.display = 'none'; el.className = 'alert'; }, 5000);
     }
 
+    function togglePassword() {
+      const p = document.getElementById('password');
+      const i = document.getElementById('toggle-password');
+      if (p.type === 'password') {
+        p.type = 'text';
+        i.classList.remove('fa-eye');
+        i.classList.add('fa-eye-slash');
+      } else {
+        p.type = 'password';
+        i.classList.remove('fa-eye-slash');
+        i.classList.add('fa-eye');
+      }
+    }
+
     function handleLogin() {
       const nip = document.getElementById('nip').value;
       const pass = document.getElementById('password').value;
@@ -801,7 +819,9 @@
         // Reverse array to show newest first
         [...db].reverse().forEach((row, idx) => {
           let isPending = row.status === 'Menunggu Verifikasi';
-          if (isPending) pendingCount++;
+          let isApproved = row.status === 'Disetujui';
+          if (isPending || isApproved) pendingCount++;
+          if (row.status === 'Terlambat') lateCount++;
           
           let badgeClass = isPending ? 'badge-pending' : (row.status === 'Disetujui' ? 'badge-approved' : 'badge-rejected');
           let itemStr = row.tipe === 'Barang' ? row.data.Barang : row.data.Ruang;
