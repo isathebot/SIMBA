@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIMBA - BBPK Jakarta</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-hover: #4338CA;
+      --secondary: #10B981;
+      --danger: #EF4444;
+      --warning: #F59E0B;
+      --background: #F3F4F6;
+      --surface: #FFFFFF;
+      --surface-glass: rgba(255, 255, 255, 0.8);
+      --text-main: #111827;
+      --text-muted: #6B7280;
+      --border: #E5E7EB;
+      --sidebar-w: 260px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    
+    body {
+      background: linear-gradient(135deg, #E0E7FF 0%, #F3F4F6 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Glassmorphism utilities */
+    .glass {
+      background: var(--surface-glass);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+
+    /* Login Screen */
+    #login-screen {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #4F46E5 0%, #06B6D4 100%);
+      position: absolute;
+      width: 100%;
+      z-index: 100;
+    }
+    
+    .login-box {
+      width: 100%;
+      max-width: 420px;
+      padding: 40px;
+      border-radius: 24px;
+      text-align: center;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    .login-logo {
+      font-size: 3rem;
+      color: var(--primary);
+      margin-bottom: 10px;
+      text-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .login-box h2 { font-size: 1.8rem; margin-bottom: 8px; color: var(--text-main); }
+    .login-box p { color: var(--text-muted); margin-bottom: 30px; font-size: 0.95rem; }
+
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-main);
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 1rem;
+      background: rgba(255,255,255,0.9);
+      transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+    }
+    .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); }
+
+    .btn-secondary { background: var(--secondary); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+
+    /* App Layout */
+    #app-layout {
+      display: none;
+      height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: var(--sidebar-w);
+      height: 100vh;
+      position: fixed;
+      left: 0;
+      top: 0;
+      padding: 24px 0;
+      display: flex;
+      flex-direction: column;
+      z-index: 50;
+      background: var(--surface-glass);
+      backdrop-filter: blur(20px);
+      border-right: 1px solid var(--border);
+    }
+
+    .sidebar-header {
+      padding: 0 24px 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+
+    .sidebar-brand {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .user-profile {
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), #818CF8);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+
+    .user-info h4 { font-size: 0.95rem; margin: 0; }
+    .user-info p { font-size: 0.8rem; color: var(--text-muted); margin: 0; }
+
+    .nav-menu { flex: 1; overflow-y: auto; padding: 0 16px; }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      border-radius: 12px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .nav-item:hover, .nav-item.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* Main Content */
+    .main-content {
+      margin-left: var(--sidebar-w);
+      padding: 32px;
+      min-height: 100vh;
+      overflow-y: auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+    .header h1 { font-size: 1.8rem; font-weight: 700; color: var(--text-main); }
+
+    .view-section { display: none; animation: fadeIn 0.4s ease-out; }
+    .view-section.active { display: block; }
+
+    /* Cards & Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      padding: 24px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      transition: transform 0.3s;
+    }
+    .stat-card:hover { transform: translateY(-5px); }
+    
+    .stat-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: white;
+    }
+    
+    .stat-info h3 { font-size: 2rem; margin: 0; line-height: 1; }
+    .stat-info p { margin: 5px 0 0; color: var(--text-muted); font-size: 0.9rem; }
+
+    /* Forms */
+    .card {
+      background: var(--surface-glass);
+      backdrop-filter: blur(12px);
+      border-radius: 20px;
+      padding: 32px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+      margin-bottom: 24px;
+      border: 1px solid var(--border);
+    }
+    .card-title { margin-bottom: 24px; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+
+    /* Tables */
+    .table-responsive { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 16px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { font-weight: 600; color: var(--text-muted); background: rgba(0,0,0,0.02); }
+    tr:hover { background: rgba(0,0,0,0.01); }
+    
+    .badge {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .badge-pending { background: #FEF3C7; color: #D97706; }
+    .badge-approved { background: #D1FAE5; color: #059669; }
+    .badge-rejected { background: #FEE2E2; color: #DC2626; }
+
+    /* Loader */
+    .loader {
+      display: none;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top: 3px solid white;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); transition: 0.3s; }
+      .sidebar.open { transform: translateX(0); }
+      .main-content { margin-left: 0; }
+      #menu-toggle { display: block; }
+    }
+    #menu-toggle { display: none; font-size: 1.5rem; cursor: pointer; color: var(--text-main); }
+    
+    /* Error/Success Messages */
+    .alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    .alert.error { background: #FEE2E2; color: #DC2626; display: block; border: 1px solid #F87171; }
+    .alert.success { background: #D1FAE5; color: #059669; display: block; border: 1px solid #34D399; }
+  </style>
+</head>
+<body>
+
+  <!-- Login Screen -->
+  <div id="login-screen">
+    <div class="login-box glass">
+      <div class="login-logo"><i class="fa-solid fa-boxes-stacked"></i></div>
+      <h2>SIMBA BBPK Jakarta</h2>
+      <p>Sistem Monitoring BMN Aktif</p>
+      
+      <div id="login-alert" class="alert"></div>
+
+      <div class="form-group">
+        <label>NIP</label>
+        <input type="text" id="nip" class="form-control" placeholder="Masukkan NIP Anda" value="pegawai">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="password" class="form-control" placeholder="Password (12345@)" value="12345@">
+      </div>
+      <button class="btn btn-primary" onclick="handleLogin()" id="btn-login">
+        <span class="btn-text">Masuk</span>
+        <div class="loader" id="login-loader"></div>
+      </button>
+      <div style="margin-top:20px;font-size:0.8rem;color:var(--text-muted)">
+        Hint role login dummy (jika db kosong):<br> nip: <b>admin</b>, <b>pegawai</b>, <b>pengelola</b>, <b>kepala</b>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Layout -->
+  <div id="app-layout">
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand">
+          <i class="fa-solid fa-boxes-stacked"></i> SIMBA
+        </div>
+        <div class="user-profile">
+          <div class="avatar" id="user-avatar">P</div>
+          <div class="user-info">
+            <h4 id="user-name">Nama Pegawai</h4>
+            <p id="user-role">Role</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="nav-menu">
+        <a class="nav-item active" onclick="switchView('dashboard')">
+          <i class="fa-solid fa-chart-pie"></i> Dashboard
+        </a>
+        <a class="nav-item" onclick="switchView('peminjaman')">
+          <i class="fa-solid fa-laptop"></i> Peminjaman Barang
+        </a>
+        <a class="nav-item" onclick="switchView('penyewaan')">
+          <i class="fa-solid fa-door-open"></i> Penyewaan Ruang
+        </a>
+        
+        <!-- Role Specific Menus -->
+        <div id="menu-verifikasi" style="display:none;">
+          <a class="nav-item" onclick="switchView('verifikasi')">
+            <i class="fa-solid fa-clipboard-check"></i> Verifikasi
+          </a>
+          <a class="nav-item" onclick="switchView('laporan')">
+            <i class="fa-solid fa-file-lines"></i> Laporan & Log
+          </a>
+        </div>
+        
+        <div id="menu-monitoring" style="display:none;">
+          <a class="nav-item" onclick="switchView('monitoring')">
+            <i class="fa-solid fa-desktop"></i> Monitoring
+          </a>
+        </div>
+      </div>
+      
+      <div style="padding: 24px;">
+        <button class="btn" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);" onclick="logout()">
+          <i class="fa-solid fa-right-from-bracket"></i> Keluar
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="header">
+        <i class="fa-solid fa-bars" id="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')"></i>
+        <h1 id="page-title">Dashboard Overview</h1>
+        <div id="date-display" style="color: var(--text-muted); font-weight: 500;"></div>
+      </div>
+
+      <!-- VIEW: DASHBOARD -->
+      <div id="view-dashboard" class="view-section active">
+        <div class="stats-grid">
+          <div class="stat-card glass">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #4F46E5, #818CF8)">
+              <i class="fa-solid fa-box-open"></i>
+            </div>
+            <div class="stat-info">
+              <h3 id="stat-barang">0</h3>
+              <p>Total Barang</p>
+            </div>
+          </div>
+          <div class="stat-card glass">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #10B981, #34D399)">
+              <i class="fa-solid fa-door-closed"></i>
+            </div>
+            <div class="stat-info">
+              <h3 id="stat-ruang">0</h3>
+              <p>Ruang Studio</p>
+            </div>
+          </div>
+          <div class="stat-card glass">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #F59E0B, #FBBF24)">
+              <i class="fa-solid fa-clock-rotate-left"></i>
+            </div>
+            <div class="stat-info">
+              <h3 id="stat-pending">0</h3>
+              <p>Menunggu Verifikasi</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title"><i class="fa-solid fa-bullhorn"></i> Informasi Sistem</h3>
+          <p style="color: var(--text-muted); line-height: 1.6;">
+            Selamat datang di <b>Sistem Monitoring BMN Aktif (SIMBA)</b> Balai Besar Pelatihan Kesehatan Jakarta.
+            Sistem ini memfasilitasi pegawai dalam melakukan permohonan peminjaman Barang Milik Negara (BMN) dan penyewaan ruang studio secara digital dan terintegrasi.
+          </p>
+        </div>
+      </div>
+
+      <!-- VIEW: PEMINJAMAN BARANG -->
+      <div id="view-peminjaman" class="view-section">
+        <div class="card">
+          <h3 class="card-title">Formulir Peminjaman Barang</h3>
+          <div id="alert-peminjaman" class="alert"></div>
+          <div class="stats-grid" style="grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+              <label>Pilih Barang</label>
+              <select id="select-barang" class="form-control">
+                <option value="">Memuat data barang...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Tujuan Peminjaman</label>
+              <input type="text" id="tujuan-pinjam" class="form-control" placeholder="Contoh: Rapat Koordinasi">
+            </div>
+            <div class="form-group">
+              <label>Tanggal Pinjam</label>
+              <input type="date" id="tgl-pinjam" class="form-control">
+            </div>
+            <div class="form-group">
+              <label>Tanggal Kembali</label>
+              <input type="date" id="tgl-kembali" class="form-control">
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="submitPeminjaman()" style="width: auto;">Ajukan Peminjaman</button>
+        </div>
+      </div>
+
+      <!-- VIEW: PENYEWAAN RUANG -->
+      <div id="view-penyewaan" class="view-section">
+        <div class="card">
+          <h3 class="card-title">Formulir Penyewaan Ruang Studio</h3>
+          <div id="alert-penyewaan" class="alert"></div>
+          <div class="stats-grid" style="grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+              <label>Pilih Ruang</label>
+              <select id="select-ruang" class="form-control">
+                <option value="">Memuat data ruang...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Acara / Kegiatan</label>
+              <input type="text" id="acara-ruang" class="form-control" placeholder="Nama Kegiatan">
+            </div>
+            <div class="form-group">
+              <label>Waktu Mulai</label>
+              <input type="datetime-local" id="waktu-mulai" class="form-control">
+            </div>
+            <div class="form-group">
+              <label>Waktu Selesai</label>
+              <input type="datetime-local" id="waktu-selesai" class="form-control">
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="submitPenyewaan()" style="width: auto;">Ajukan Penyewaan</button>
+        </div>
+      </div>
+
+      <!-- VIEW: VERIFIKASI -->
+      <div id="view-verifikasi" class="view-section">
+        <div class="card">
+          <h3 class="card-title">Daftar Permohonan Menunggu Verifikasi</h3>
+          <p style="color: var(--text-muted); margin-bottom: 20px;">Harap tinjau permohonan berikut. Anda dapat menyetujui atau menolak permohonan.</p>
+          <div class="table-responsive">
+            <table id="table-verifikasi">
+              <thead>
+                <tr>
+                  <th>Tipe</th>
+                  <th>Pemohon</th>
+                  <th>Item / Ruang</th>
+                  <th>Tanggal</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="5" style="text-align:center;">Memuat data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW: LAPORAN -->
+      <div id="view-laporan" class="view-section">
+        <div class="card">
+          <h3 class="card-title">Log & Riwayat</h3>
+          <div class="table-responsive">
+            <table id="table-laporan">
+              <thead>
+                <tr>
+                  <th>Tipe</th>
+                  <th>Pemohon</th>
+                  <th>Item / Ruang</th>
+                  <th>Status</th>
+                  <th>Waktu Pengajuan</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="5" style="text-align:center;">Memuat data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      <!-- VIEW: MONITORING -->
+      <div id="view-monitoring" class="view-section">
+        <div class="card">
+          <h3 class="card-title">Monitoring Kegiatan Pengelola BMN</h3>
+          <p style="color:var(--text-muted)">Halaman ini khusus untuk Kepala Kantor memantau kinerja persetujuan/penolakan BMN.</p>
+          <div class="stats-grid" style="margin-top:20px;">
+            <div class="stat-card" style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10B981;">
+              <div>
+                <h3 style="color:#10B981; font-size:2rem;">15</h3>
+                <p>Disetujui Bulan Ini</p>
+              </div>
+            </div>
+            <div class="stat-card" style="background: rgba(239, 68, 68, 0.1); border: 1px solid #EF4444;">
+              <div>
+                <h3 style="color:#EF4444; font-size:2rem;">2</h3>
+                <p>Ditolak Bulan Ini</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // State
+    let currentUser = null;
+    let dataBarang = [];
+    let dataRuang = [];
+
+    // Date
+    document.getElementById('date-display').innerText = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    // Mock Backend (for local UI testing without GAS)
+    const IS_GAS = typeof google !== 'undefined' && google.script;
+    
+    function showAlert(id, msg, type) {
+      const el = document.getElementById(id);
+      el.className = `alert ${type}`;
+      el.innerText = msg;
+      setTimeout(() => { el.style.display = 'none'; el.className = 'alert'; }, 5000);
+    }
+
+    function handleLogin() {
+      const nip = document.getElementById('nip').value;
+      const pass = document.getElementById('password').value;
+      const btnText = document.querySelector('#btn-login .btn-text');
+      const loader = document.getElementById('login-loader');
+      
+      if(!nip || !pass) return showAlert('login-alert', 'NIP dan Password wajib diisi', 'error');
+      
+      btnText.style.display = 'none';
+      loader.style.display = 'block';
+
+      if (IS_GAS) {
+        google.script.run.withSuccessHandler(res => {
+          btnText.style.display = 'block'; loader.style.display = 'none';
+          if(res.success) {
+            setupUserSession(res);
+          } else {
+            showAlert('login-alert', res.message, 'error');
+          }
+        }).login(nip, pass);
+      } else {
+        // Fallback mock
+        setTimeout(() => {
+          btnText.style.display = 'block'; loader.style.display = 'none';
+          if(pass !== '12345@') return showAlert('login-alert', 'Password salah', 'error');
+          let role = nip === 'admin' ? 'Admin' : nip === 'kepala' ? 'Kepala Kantor' : nip === 'pengelola' ? 'Pengelola BMN' : 'Pegawai';
+          setupUserSession({success: true, role: role, name: 'User ' + nip, nip: nip});
+        }, 1000);
+      }
+    }
+
+    function setupUserSession(user) {
+      currentUser = user;
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app-layout').style.display = 'flex';
+      
+      document.getElementById('user-name').innerText = user.name;
+      document.getElementById('user-role').innerText = user.role;
+      document.getElementById('user-avatar').innerText = user.name.charAt(0).toUpperCase();
+
+      // Setup Roles Menu
+      if (['Admin', 'Pengelola BMN', 'Kepala Kantor'].includes(user.role)) {
+        document.getElementById('menu-verifikasi').style.display = 'block';
+      }
+      if (['Admin', 'Kepala Kantor'].includes(user.role)) {
+        document.getElementById('menu-monitoring').style.display = 'block';
+      }
+      
+      loadDashboardData();
+    }
+
+    function logout() {
+      currentUser = null;
+      document.getElementById('app-layout').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
+    }
+
+    function switchView(viewId) {
+      document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+      document.getElementById(`view-${viewId}`).classList.add('active');
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      
+      const titles = {
+        'dashboard': 'Dashboard Overview',
+        'peminjaman': 'Peminjaman Barang',
+        'penyewaan': 'Penyewaan Ruang Studio',
+        'verifikasi': 'Verifikasi Permohonan',
+        'laporan': 'Laporan & Log',
+        'monitoring': 'Monitoring Kegiatan'
+      };
+      document.getElementById('page-title').innerText = titles[viewId];
+      
+      if(window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
+    }
+
+    function loadDashboardData() {
+      // Mock data load or GAS load
+      if(IS_GAS) {
+        google.script.run.withSuccessHandler(data => {
+          dataBarang = data;
+          document.getElementById('stat-barang').innerText = data.length || 0;
+          let select = document.getElementById('select-barang');
+          select.innerHTML = '<option value="">Pilih Barang...</option>';
+          data.forEach(item => {
+            let nama = item['Nama Barang'] || item['nama_barang'] || item['Nama'];
+            if(nama) select.innerHTML += `<option value="${nama}">${nama}</option>`;
+          });
+        }).getBarang();
+
+        google.script.run.withSuccessHandler(data => {
+          dataRuang = data;
+          document.getElementById('stat-ruang').innerText = data.length || 0;
+          let select = document.getElementById('select-ruang');
+          select.innerHTML = '<option value="">Pilih Ruang...</option>';
+          data.forEach(item => {
+            let nama = item['Nama Ruang'] || item['nama_ruang'] || item['Nama'];
+            if(nama) select.innerHTML += `<option value="${nama}">${nama}</option>`;
+          });
+        }).getRuang();
+        
+        // Mock load table verifikasi
+        document.querySelector('#table-verifikasi tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;">Tidak ada permohonan</td></tr>`;
+        document.querySelector('#table-laporan tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;">Belum ada log</td></tr>`;
+      } else {
+        // Mock UI setup
+        document.getElementById('stat-barang').innerText = '120';
+        document.getElementById('stat-ruang').innerText = '8';
+        document.getElementById('select-barang').innerHTML = '<option>Laptop Asus ROG</option><option>Proyektor Epson</option>';
+        document.getElementById('select-ruang').innerHTML = '<option>Studio Podcast A</option><option>Ruang Rapat B</option>';
+        document.querySelector('#table-verifikasi tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;">Tidak ada permohonan</td></tr>`;
+        document.querySelector('#table-laporan tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;">Belum ada log</td></tr>`;
+      }
+    }
+
+    function submitPeminjaman() {
+      const brg = document.getElementById('select-barang').value;
+      const tuju = document.getElementById('tujuan-pinjam').value;
+      const tglP = document.getElementById('tgl-pinjam').value;
+      const tglK = document.getElementById('tgl-kembali').value;
+      
+      if(!brg || !tglP || !tglK) return showAlert('alert-peminjaman', 'Semua field wajib diisi!', 'error');
+
+      const payload = { "NIP": currentUser.nip, "Nama": currentUser.name, "Barang": brg, "Tujuan": tuju, "Tanggal Pinjam": tglP, "Tanggal Kembali": tglK };
+      
+      if(IS_GAS) {
+        google.script.run.withSuccessHandler(res => {
+          if(res.success) { showAlert('alert-peminjaman', res.message, 'success'); }
+          else showAlert('alert-peminjaman', res.message, 'error');
+        }).submitPeminjaman(payload);
+      } else {
+        showAlert('alert-peminjaman', 'Pengajuan berhasil dikirim (Mock Mode)', 'success');
+      }
+    }
+
+    function submitPenyewaan() {
+      const ruang = document.getElementById('select-ruang').value;
+      const acara = document.getElementById('acara-ruang').value;
+      const tglM = document.getElementById('waktu-mulai').value;
+      const tglS = document.getElementById('waktu-selesai').value;
+      
+      if(!ruang || !tglM || !tglS) return showAlert('alert-penyewaan', 'Semua field wajib diisi!', 'error');
+
+      const payload = { "NIP": currentUser.nip, "Nama": currentUser.name, "Ruang": ruang, "Acara": acara, "Waktu Mulai": tglM, "Waktu Selesai": tglS };
+      
+      if(IS_GAS) {
+        google.script.run.withSuccessHandler(res => {
+          if(res.success) { showAlert('alert-penyewaan', res.message, 'success'); }
+          else showAlert('alert-penyewaan', res.message, 'error');
+        }).submitPenyewaan(payload);
+      } else {
+        showAlert('alert-penyewaan', 'Pengajuan berhasil dikirim (Mock Mode)', 'success');
+      }
+    }
+  </script>
+</body>
+</html>
