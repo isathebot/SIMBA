@@ -433,7 +433,7 @@
               <i class="fa-solid fa-clipboard-list"></i>
             </div>
             <div class="stat-info">
-              <h3 id="stat-pending">2</h3>
+              <h3 id="stat-pending">0</h3>
               <p>Pinjaman Aktif</p>
             </div>
           </div>
@@ -442,9 +442,29 @@
               <i class="fa-solid fa-triangle-exclamation"></i>
             </div>
             <div class="stat-info">
-              <h3 id="stat-terlambat">1</h3>
+              <h3 id="stat-terlambat">0</h3>
               <p>Terlambat</p>
             </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 24px;">
+          <h3 class="card-title" style="font-size: 1.1rem;"><i class="fa-solid fa-clock-rotate-left"></i> Riwayat Transaksi Terbaru</h3>
+          <div class="table-responsive">
+            <table id="table-dashboard-riwayat">
+              <thead>
+                <tr>
+                  <th>Tipe</th>
+                  <th>Pemohon</th>
+                  <th>Item / Ruang</th>
+                  <th>Waktu Pengajuan</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="5" style="text-align:center;">Belum ada transaksi</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -766,8 +786,80 @@
       document.getElementById('stat-barang').innerText = defaultBarang.length;
       document.getElementById('stat-ruang').innerText = defaultRuang.length;
 
-      document.querySelector('#table-verifikasi tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;">Tidak ada permohonan</td></tr>`;
-      document.querySelector('#table-laporan tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;">Belum ada log</td></tr>`;
+      // Load data from LocalStorage
+      let db = JSON.parse(localStorage.getItem('simba_data') || '[]');
+      
+      let pendingCount = 0;
+      let lateCount = 0;
+      let riwayatHtml = '';
+      let verifikasiHtml = '';
+      let laporanHtml = '';
+
+      if (db.length === 0) {
+        riwayatHtml = verifikasiHtml = laporanHtml = `<tr><td colspan="5" style="text-align:center;">Belum ada data</td></tr>`;
+      } else {
+        // Reverse array to show newest first
+        [...db].reverse().forEach((row, idx) => {
+          let isPending = row.status === 'Menunggu Verifikasi';
+          if (isPending) pendingCount++;
+          
+          let badgeClass = isPending ? 'badge-pending' : (row.status === 'Disetujui' ? 'badge-approved' : 'badge-rejected');
+          let itemStr = row.tipe === 'Barang' ? row.data.Barang : row.data.Ruang;
+          
+          let tr = `<tr>
+            <td><span style="background:rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">${row.tipe}</span></td>
+            <td><strong>${row.data.Nama}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">${row.data.NIP}</span></td>
+            <td>${itemStr}</td>
+            <td>${row.timestamp}</td>
+            <td><span class="badge ${badgeClass}">${row.status}</span></td>
+          </tr>`;
+          
+          riwayatHtml += tr;
+          laporanHtml += tr;
+
+          // Tabel verifikasi (khusus untuk yang role nya cocok dan status pending)
+          if (isPending) {
+            let canVerify = false;
+            if (currentUser && currentUser.role === 'Admin') canVerify = true;
+            if (currentUser && currentUser.role === 'Pengelola BMN' && row.tipe === 'Barang') canVerify = true;
+            if (currentUser && currentUser.role === 'Pengelola Ruang' && row.tipe === 'Ruangan') canVerify = true;
+            
+            if (canVerify) {
+              verifikasiHtml += `<tr>
+                <td><span style="background:rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">${row.tipe}</span></td>
+                <td><strong>${row.data.Nama}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">${row.data.NIP}</span></td>
+                <td>${itemStr}</td>
+                <td>${row.timestamp}</td>
+                <td>
+                  <button class="btn btn-primary" style="padding: 4px 8px; width: auto; font-size: 0.8rem;" onclick="updateStatus(${row.id}, 'Disetujui')">Setujui</button>
+                  <button class="btn btn-secondary" style="background: rgba(239, 68, 68, 0.2); color: #EF4444; padding: 4px 8px; width: auto; font-size: 0.8rem;" onclick="updateStatus(${row.id}, 'Ditolak')">Tolak</button>
+                </td>
+              </tr>`;
+            }
+          }
+        });
+      }
+
+      if (verifikasiHtml === '') verifikasiHtml = `<tr><td colspan="5" style="text-align:center;">Tidak ada permohonan baru yang perlu diverifikasi</td></tr>`;
+
+      document.getElementById('stat-pending').innerText = pendingCount;
+      document.getElementById('stat-terlambat').innerText = lateCount; // Mock 0 for now
+      
+      document.querySelector('#table-dashboard-riwayat tbody').innerHTML = riwayatHtml;
+      document.querySelector('#table-verifikasi tbody').innerHTML = verifikasiHtml;
+      document.querySelector('#table-laporan tbody').innerHTML = laporanHtml;
+    }
+
+    // Helper update status
+    function updateStatus(id, newStatus) {
+      let db = JSON.parse(localStorage.getItem('simba_data') || '[]');
+      let item = db.find(x => x.id === id);
+      if (item) {
+        item.status = newStatus;
+        localStorage.setItem('simba_data', JSON.stringify(db));
+        loadDashboardData();
+        alert(`Berhasil memperbarui status menjadi: ${newStatus}`);
+      }
     }
 
     function submitPeminjaman() {
@@ -780,14 +872,31 @@
       
       if(!nama || !nipPemohon || !brg || !tglP || !tglK) return showAlert('alert-peminjaman', 'Field Nama, NIP, Barang, dan Tanggal wajib diisi!', 'error');
 
+      const payload = { "NIP": nipPemohon, "Nama": nama, "Barang": brg, "Tujuan": tuju, "Tanggal Pinjam": tglP, "Tanggal Kembali": tglK };
+      
+      // Simpan ke LocalStorage
+      let db = JSON.parse(localStorage.getItem('simba_data') || '[]');
+      db.push({
+        id: Date.now(),
+        tipe: 'Barang',
+        data: payload,
+        status: 'Menunggu Verifikasi',
+        timestamp: new Date().toLocaleString('id-ID')
+      });
+      localStorage.setItem('simba_data', JSON.stringify(db));
+
       showAlert('alert-peminjaman', 'Memproses pengajuan...', 'pending');
       
       setTimeout(() => {
-        showAlert('alert-peminjaman', 'Pengajuan berhasil dikirim!', 'success');
+        alert("✅ SUKSES!\n\nPengajuan peminjaman barang Anda telah berhasil dikirim dan masuk ke sistem. Data Anda sedang menunggu verifikasi dari Pengelola BMN.");
+        
         document.getElementById('peminjaman-nama').value = '';
         document.getElementById('peminjaman-nip').value = '';
         document.getElementById('tujuan-pinjam').value = '';
-      }, 600);
+        
+        loadDashboardData(); // Refresh table
+        switchView('dashboard'); // Redirect to dashboard to see history
+      }, 400);
     }
 
     function submitPenyewaan() {
@@ -800,14 +909,31 @@
       
       if(!nama || !nipPemohon || !ruang || !tglM || !tglS) return showAlert('alert-penyewaan', 'Field Nama, NIP, Ruang, dan Tanggal wajib diisi!', 'error');
 
+      const payload = { "NIP": nipPemohon, "Nama": nama, "Ruang": ruang, "Acara": acara, "Waktu Mulai": tglM, "Waktu Selesai": tglS };
+      
+      // Simpan ke LocalStorage
+      let db = JSON.parse(localStorage.getItem('simba_data') || '[]');
+      db.push({
+        id: Date.now(),
+        tipe: 'Ruangan',
+        data: payload,
+        status: 'Menunggu Verifikasi',
+        timestamp: new Date().toLocaleString('id-ID')
+      });
+      localStorage.setItem('simba_data', JSON.stringify(db));
+
       showAlert('alert-penyewaan', 'Memproses pengajuan...', 'pending');
       
       setTimeout(() => {
-        showAlert('alert-penyewaan', 'Pengajuan berhasil dikirim!', 'success');
+        alert("✅ SUKSES!\n\nPengajuan penyewaan ruang Anda telah berhasil dikirim dan masuk ke sistem. Data Anda sedang menunggu verifikasi dari Pengelola Ruangan.");
+        
         document.getElementById('penyewaan-nama').value = '';
         document.getElementById('penyewaan-nip').value = '';
         document.getElementById('acara-ruang').value = '';
-      }, 600);
+        
+        loadDashboardData(); // Refresh table
+        switchView('dashboard'); // Redirect to dashboard to see history
+      }, 400);
     }
 
     function downloadExcel() {
