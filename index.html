@@ -654,6 +654,20 @@
     document.getElementById('date-display').innerText = d.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     document.getElementById('dash-date').innerText = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
+    // API Call Helper for Vercel Serverless
+    async function apiCall(action, payload) {
+      try {
+        const res = await fetch('/api/sheets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, payload })
+        });
+        return await res.json();
+      } catch (e) {
+        return { success: false, message: 'Gagal terhubung ke database online.' };
+      }
+    }
+
     function showAlert(id, msg, type) {
       const el = document.getElementById(id);
       el.className = `alert ${type}`;
@@ -674,9 +688,7 @@
         i.classList.remove('fa-eye-slash');
         i.classList.add('fa-eye');
       }
-    }
-
-    function handleLogin() {
+    }    async function handleLogin() {
       const nip = document.getElementById('nip').value;
       const pass = document.getElementById('password').value;
       const btnText = document.querySelector('#btn-login .btn-text');
@@ -687,25 +699,15 @@
       btnText.style.display = 'none';
       loader.style.display = 'block';
 
-      setTimeout(() => {
-        btnText.style.display = 'block'; loader.style.display = 'none';
-        if(pass !== '12345@') return showAlert('login-alert', 'Password salah', 'error');
-        let role = "Pegawai";
-        if(nip === 'admin') role = 'Admin';
-        else if(nip === 'kepala') role = 'Kepala Kantor';
-        else if(nip === 'bmn') role = 'Pengelola BMN';
-        else if(nip === 'lobby') role = 'Pengelola Ruang';
-        else if(nip !== 'pegawai') return showAlert('login-alert', 'User tidak ditemukan', 'error');
-        
-        let userName = "Pegawai BBPK";
-        if(nip === 'admin') userName = "Administrator";
-        else if(nip === 'kepala') userName = "Kepala Kantor";
-        else if(nip === 'bmn') userName = "Pengelola BMN";
-        else if(nip === 'lobby') userName = "Pengelola Ruangan";
-        
-        setupUserSession({success: true, role: role, name: userName, nip: nip});
-      }, 500);
-    }
+      const res = await apiCall('login', { nip, password: pass });
+      
+      btnText.style.display = 'block'; loader.style.display = 'none';
+      if(res.success) {
+        setupUserSession(res);
+      } else {
+        showAlert('login-alert', res.message, 'error');
+      }
+    } }
 
     function setupUserSession(user) {
       currentUser = user;
@@ -778,9 +780,7 @@
       document.getElementById('page-title').innerText = titles[viewId];
       
       if(window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
-    }
-
-    function loadDashboardData() {
+    }    async function loadDashboardData() {
       const defaultBarang = [
         "Laptop (3100102002)", "PC (3100102001)", "Printer (3100203003)", "Penghancur Kertas (3050105015)",
         "Kamera (3050206020)", "Mobil Dinas (Avanza) (3020102003)", "Mobil Dinas (Innova) (3020101003)",
@@ -795,21 +795,21 @@
         "Studio ULP 2", "Studio ULP 3", "Zoom Pod 1", "Zoom Pod 2", "Zoom Pod 3"
       ];
 
-      // Build options
+      // Populate Selects with Defaults first
       let barangHtml = '<option value="">Pilih Barang...</option>';
       defaultBarang.forEach(b => barangHtml += `<option value="${b}">${b}</option>`);
-      
       let ruangHtml = '<option value="">Pilih Ruang...</option>';
       defaultRuang.forEach(r => ruangHtml += `<option value="${r}">${r}</option>`);
-
       document.getElementById('select-barang').innerHTML = barangHtml;
       document.getElementById('select-ruang').innerHTML = ruangHtml;
 
+      // Update Stats UI
       document.getElementById('stat-barang').innerText = defaultBarang.length;
       document.getElementById('stat-ruang').innerText = defaultRuang.length;
 
-      // Load data from LocalStorage
-      let db = JSON.parse(localStorage.getItem('simba_data') || '[]');
+      // Fetch Online Data
+      const res = await apiCall('getHistory', {});
+      let db = (res && res.success) ? res.data : [];
       
       let pendingCount = 0;
       let lateCount = 0;
@@ -818,45 +818,43 @@
       let laporanHtml = '';
 
       if (db.length === 0) {
-        riwayatHtml = verifikasiHtml = laporanHtml = `<tr><td colspan="5" style="text-align:center;">Belum ada data</td></tr>`;
+        riwayatHtml = verifikasiHtml = laporanHtml = `<tr><td colspan="5" style="text-align:center;">Belum ada data online</td></tr>`;
       } else {
-        // Reverse array to show newest first
-        [...db].reverse().forEach((row, idx) => {
-          let isPending = row.status === 'Menunggu Verifikasi';
-          let isApproved = row.status === 'Disetujui';
+        [...db].reverse().forEach((row) => {
+          let isPending = row.Status === 'Menunggu Verifikasi';
+          let isApproved = row.Status === 'Disetujui';
           if (isPending || isApproved) pendingCount++;
-          if (row.status === 'Terlambat') lateCount++;
+          if (row.Status === 'Terlambat') lateCount++;
           
-          let badgeClass = isPending ? 'badge-pending' : (row.status === 'Disetujui' ? 'badge-approved' : 'badge-rejected');
-          let itemStr = row.tipe === 'Barang' ? row.data.Barang : row.data.Ruang;
+          let badgeClass = isPending ? 'badge-pending' : (row.Status === 'Disetujui' ? 'badge-approved' : 'badge-rejected');
+          let itemStr = row.Barang || row.Ruang || "-";
           
           let tr = `<tr>
             <td><span style="background:rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">${row.tipe}</span></td>
-            <td><strong>${row.data.Nama}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">${row.data.NIP}</span></td>
+            <td><strong>${row.Nama}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">${row.NIP}</span></td>
             <td>${itemStr}</td>
-            <td>${row.timestamp}</td>
-            <td><span class="badge ${badgeClass}">${row.status}</span></td>
+            <td>${row['Tanggal Pengajuan'] || "-"}</td>
+            <td><span class="badge ${badgeClass}">${row.Status}</span></td>
           </tr>`;
           
           riwayatHtml += tr;
           laporanHtml += tr;
 
-          // Tabel verifikasi (khusus untuk yang role nya cocok dan status pending)
           if (isPending) {
             let canVerify = false;
-            if (currentUser && currentUser.role === 'Admin') canVerify = true;
-            if (currentUser && currentUser.role === 'Pengelola BMN' && row.tipe === 'Barang') canVerify = true;
-            if (currentUser && currentUser.role === 'Pengelola Ruang' && row.tipe === 'Ruangan') canVerify = true;
+            if (currentUser.role === 'Admin') canVerify = true;
+            if (currentUser.role === 'Pengelola BMN' && row.tipe === 'Barang') canVerify = true;
+            if (currentUser.role === 'Pengelola Ruang' && row.tipe === 'Ruangan') canVerify = true;
             
             if (canVerify) {
               verifikasiHtml += `<tr>
                 <td><span style="background:rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">${row.tipe}</span></td>
-                <td><strong>${row.data.Nama}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">${row.data.NIP}</span></td>
+                <td><strong>${row.Nama}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">${row.NIP}</span></td>
                 <td>${itemStr}</td>
-                <td>${row.timestamp}</td>
+                <td>${row['Tanggal Pengajuan'] || "-"}</td>
                 <td>
-                  <button class="btn btn-primary" style="padding: 4px 8px; width: auto; font-size: 0.8rem;" onclick="updateStatus(${row.id}, 'Disetujui')">Setujui</button>
-                  <button class="btn btn-secondary" style="background: rgba(239, 68, 68, 0.2); color: #EF4444; padding: 4px 8px; width: auto; font-size: 0.8rem;" onclick="updateStatus(${row.id}, 'Ditolak')">Tolak</button>
+                  <button class="btn btn-primary" style="padding: 4px 8px; width: auto; font-size: 0.8rem;" onclick="updateStatus('${row.tipe}', ${row._rowIndex}, 'Disetujui')">Setujui</button>
+                  <button class="btn btn-secondary" style="background: rgba(239, 68, 68, 0.2); color: #EF4444; padding: 4px 8px; width: auto; font-size: 0.8rem;" onclick="updateStatus('${row.tipe}', ${row._rowIndex}, 'Ditolak')">Tolak</button>
                 </td>
               </tr>`;
             }
@@ -864,29 +862,26 @@
         });
       }
 
-      if (verifikasiHtml === '') verifikasiHtml = `<tr><td colspan="5" style="text-align:center;">Tidak ada permohonan baru yang perlu diverifikasi</td></tr>`;
+      if (verifikasiHtml === '') verifikasiHtml = `<tr><td colspan="5" style="text-align:center;">Tidak ada permohonan baru</td></tr>`;
 
       document.getElementById('stat-pending').innerText = pendingCount;
-      document.getElementById('stat-terlambat').innerText = lateCount; // Mock 0 for now
-      
+      document.getElementById('stat-terlambat').innerText = lateCount;
       document.querySelector('#table-dashboard-riwayat tbody').innerHTML = riwayatHtml;
       document.querySelector('#table-verifikasi tbody').innerHTML = verifikasiHtml;
       document.querySelector('#table-laporan tbody').innerHTML = laporanHtml;
     }
 
-    // Helper update status
-    function updateStatus(id, newStatus) {
-      let db = JSON.parse(localStorage.getItem('simba_data') || '[]');
-      let item = db.find(x => x.id === id);
-      if (item) {
-        item.status = newStatus;
-        localStorage.setItem('simba_data', JSON.stringify(db));
+    async function updateStatus(type, rowIndex, status) {
+      const res = await apiCall('updateStatus', { type, rowIndex, status });
+      if (res && res.success) {
+        alert(`Berhasil memperbarui status menjadi: ${status}`);
         loadDashboardData();
-        alert(`Berhasil memperbarui status menjadi: ${newStatus}`);
+      } else {
+        alert("Gagal memperbarui status.");
       }
     }
 
-    function submitPeminjaman() {
+    async function submitPeminjaman() {
       const nama = document.getElementById('peminjaman-nama').value;
       const nipPemohon = document.getElementById('peminjaman-nip').value;
       const brg = document.getElementById('select-barang').value;
@@ -896,34 +891,23 @@
       
       if(!nama || !nipPemohon || !brg || !tglP || !tglK) return showAlert('alert-peminjaman', 'Field Nama, NIP, Barang, dan Tanggal wajib diisi!', 'error');
 
-      const payload = { "NIP": nipPemohon, "Nama": nama, "Barang": brg, "Tujuan": tuju, "Tanggal Pinjam": tglP, "Tanggal Kembali": tglK };
+      const payload = { type: "peminjaman", data: { "NIP": nipPemohon, "Nama": nama, "Barang": brg, "Tujuan": tuju, "Tanggal Pinjam": tglP, "Tanggal Kembali": tglK } };
       
-      // Simpan ke LocalStorage
-      let db = JSON.parse(localStorage.getItem('simba_data') || '[]');
-      db.push({
-        id: Date.now(),
-        tipe: 'Barang',
-        data: payload,
-        status: 'Menunggu Verifikasi',
-        timestamp: new Date().toLocaleString('id-ID')
-      });
-      localStorage.setItem('simba_data', JSON.stringify(db));
-
-      showAlert('alert-peminjaman', 'Memproses pengajuan...', 'pending');
+      showAlert('alert-peminjaman', 'Menyimpan data ke database...', 'pending');
+      const res = await apiCall('submitForm', payload);
       
-      setTimeout(() => {
-        alert("✅ SUKSES!\n\nPengajuan peminjaman barang Anda telah berhasil dikirim dan masuk ke sistem. Data Anda sedang menunggu verifikasi dari Pengelola BMN.");
-        
+      if(res && res.success) {
+        alert("✅ SUKSES!\n\nPengajuan Anda telah tersimpan di database online.");
         document.getElementById('peminjaman-nama').value = '';
         document.getElementById('peminjaman-nip').value = '';
-        document.getElementById('tujuan-pinjam').value = '';
-        
-        loadDashboardData(); // Refresh table
-        switchView('dashboard'); // Redirect to dashboard to see history
-      }, 400);
+        loadDashboardData();
+        switchView('dashboard');
+      } else {
+        showAlert('alert-peminjaman', res.message || 'Gagal menyimpan', 'error');
+      }
     }
 
-    function submitPenyewaan() {
+    async function submitPenyewaan() {
       const nama = document.getElementById('penyewaan-nama').value;
       const nipPemohon = document.getElementById('penyewaan-nip').value;
       const ruang = document.getElementById('select-ruang').value;
@@ -933,31 +917,20 @@
       
       if(!nama || !nipPemohon || !ruang || !tglM || !tglS) return showAlert('alert-penyewaan', 'Field Nama, NIP, Ruang, dan Tanggal wajib diisi!', 'error');
 
-      const payload = { "NIP": nipPemohon, "Nama": nama, "Ruang": ruang, "Acara": acara, "Waktu Mulai": tglM, "Waktu Selesai": tglS };
+      const payload = { type: "penyewaan", data: { "NIP": nipPemohon, "Nama": nama, "Ruang": ruang, "Acara": acara, "Waktu Mulai": tglM, "Waktu Selesai": tglS } };
       
-      // Simpan ke LocalStorage
-      let db = JSON.parse(localStorage.getItem('simba_data') || '[]');
-      db.push({
-        id: Date.now(),
-        tipe: 'Ruangan',
-        data: payload,
-        status: 'Menunggu Verifikasi',
-        timestamp: new Date().toLocaleString('id-ID')
-      });
-      localStorage.setItem('simba_data', JSON.stringify(db));
-
-      showAlert('alert-penyewaan', 'Memproses pengajuan...', 'pending');
+      showAlert('alert-penyewaan', 'Menyimpan data ke database...', 'pending');
+      const res = await apiCall('submitForm', payload);
       
-      setTimeout(() => {
-        alert("✅ SUKSES!\n\nPengajuan penyewaan ruang Anda telah berhasil dikirim dan masuk ke sistem. Data Anda sedang menunggu verifikasi dari Pengelola Ruangan.");
-        
+      if(res && res.success) {
+        alert("✅ SUKSES!\n\nPenyewaan ruang telah tersimpan di database online.");
         document.getElementById('penyewaan-nama').value = '';
         document.getElementById('penyewaan-nip').value = '';
-        document.getElementById('acara-ruang').value = '';
-        
-        loadDashboardData(); // Refresh table
-        switchView('dashboard'); // Redirect to dashboard to see history
-      }, 400);
+        loadDashboardData();
+        switchView('dashboard');
+      } else {
+        showAlert('alert-penyewaan', res.message || 'Gagal menyimpan', 'error');
+      }
     }
 
     function downloadExcel() {

@@ -1,0 +1,9 @@
+{
+  "name": "simba",
+  "version": "1.0.0",
+  "description": "Sistem Monitoring BMN Aktif",
+  "main": "api/sheets.js",
+  "dependencies": {
+    "googleapis": "^140.0.0"
+  }
+}
