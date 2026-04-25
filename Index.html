@@ -6,6 +6,7 @@
   <title>SIMBA - BBPK Jakarta</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
       --primary: #4F46E5;
@@ -13,19 +14,19 @@
       --secondary: #10B981;
       --danger: #EF4444;
       --warning: #F59E0B;
-      --background: #F3F4F6;
-      --surface: #FFFFFF;
-      --surface-glass: rgba(255, 255, 255, 0.8);
-      --text-main: #111827;
-      --text-muted: #6B7280;
-      --border: #E5E7EB;
+      --background: #0F172A;
+      --surface: #1E293B;
+      --surface-glass: rgba(30, 41, 59, 0.95);
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --border: #334155;
       --sidebar-w: 260px;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
     
     body {
-      background: linear-gradient(135deg, #E0E7FF 0%, #F3F4F6 100%);
+      background: var(--background);
       color: var(--text-main);
       min-height: 100vh;
       overflow-x: hidden;
@@ -46,7 +47,7 @@
       justify-content: center;
       align-items: center;
       min-height: 100vh;
-      background: linear-gradient(135deg, #4F46E5 0%, #06B6D4 100%);
+      background: var(--background);
       position: absolute;
       width: 100%;
       z-index: 100;
@@ -90,7 +91,8 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       font-size: 1rem;
-      background: rgba(255,255,255,0.9);
+      background: rgba(15, 23, 42, 0.5);
+      color: var(--text-main);
       transition: all 0.3s ease;
     }
 
@@ -226,7 +228,7 @@
     /* Cards & Stats */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 24px;
       margin-bottom: 32px;
     }
@@ -261,7 +263,6 @@
       backdrop-filter: blur(12px);
       border-radius: 20px;
       padding: 32px;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.04);
       margin-bottom: 24px;
       border: 1px solid var(--border);
     }
@@ -270,9 +271,9 @@
     /* Tables */
     .table-responsive { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 16px; text-align: left; border-bottom: 1px solid var(--border); }
-    th { font-weight: 600; color: var(--text-muted); background: rgba(0,0,0,0.02); }
-    tr:hover { background: rgba(0,0,0,0.01); }
+    th, td { padding: 16px; text-align: left; border-bottom: 1px solid var(--border); color: var(--text-main); }
+    th { font-weight: 600; color: var(--text-muted); background: rgba(255,255,255,0.02); }
+    tr:hover { background: rgba(255,255,255,0.05); }
     
     .badge {
       padding: 6px 12px;
@@ -333,8 +334,8 @@
       <div id="login-alert" class="alert"></div>
 
       <div class="form-group">
-        <label>NIP</label>
-        <input type="text" id="nip" class="form-control" placeholder="Masukkan NIP Anda" value="pegawai">
+        <label>User</label>
+        <input type="text" id="nip" class="form-control" placeholder="Masukkan User Anda" value="pegawai">
       </div>
       <div class="form-group">
         <label>Password</label>
@@ -344,9 +345,6 @@
         <span class="btn-text">Masuk</span>
         <div class="loader" id="login-loader"></div>
       </button>
-        Hint login: Masukkan NIP Anda. (Default Password: 12345@)<br>
-        <i>Role akan disesuaikan otomatis berdasarkan NIP.</i>
-      </div>
     </div>
   </div>
 
@@ -407,42 +405,60 @@
 
       <!-- VIEW: DASHBOARD -->
       <div id="view-dashboard" class="view-section active">
+        <div style="color: var(--text-muted); margin-bottom: 20px;">Berikut ringkasan aset BMN hari ini — <span id="dash-date"></span></div>
+        
         <div class="stats-grid">
           <div class="stat-card glass">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #4F46E5, #818CF8)">
+            <div class="stat-icon" style="background: rgba(79, 70, 229, 0.2); color: #818CF8;">
               <i class="fa-solid fa-box-open"></i>
             </div>
             <div class="stat-info">
-              <h3 id="stat-barang">0</h3>
-              <p>Total Barang</p>
+              <h3 id="stat-barang">12</h3>
+              <p>Total Aset</p>
             </div>
           </div>
           <div class="stat-card glass">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #10B981, #34D399)">
-              <i class="fa-solid fa-door-closed"></i>
+            <div class="stat-icon" style="background: rgba(16, 185, 129, 0.2); color: #34D399;">
+              <i class="fa-solid fa-check"></i>
             </div>
             <div class="stat-info">
-              <h3 id="stat-ruang">0</h3>
-              <p>Ruang Studio</p>
+              <h3 id="stat-ruang">8</h3>
+              <p>Tersedia</p>
             </div>
           </div>
           <div class="stat-card glass">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #F59E0B, #FBBF24)">
-              <i class="fa-solid fa-clock-rotate-left"></i>
+            <div class="stat-icon" style="background: rgba(245, 158, 11, 0.2); color: #FBBF24;">
+              <i class="fa-solid fa-clipboard-list"></i>
             </div>
             <div class="stat-info">
-              <h3 id="stat-pending">0</h3>
-              <p>Menunggu Verifikasi</p>
+              <h3 id="stat-pending">2</h3>
+              <p>Pinjaman Aktif</p>
+            </div>
+          </div>
+          <div class="stat-card glass">
+            <div class="stat-icon" style="background: rgba(239, 68, 68, 0.2); color: #F87171;">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div class="stat-info">
+              <h3 id="stat-terlambat">1</h3>
+              <p>Terlambat</p>
             </div>
           </div>
         </div>
 
-        <div class="card">
-          <h3 class="card-title"><i class="fa-solid fa-bullhorn"></i> Informasi Sistem</h3>
-          <p style="color: var(--text-muted); line-height: 1.6;">
-            Selamat datang di <b>Sistem Monitoring BMN Aktif (SIMBA)</b> Balai Besar Pelatihan Kesehatan Jakarta.
-            Sistem ini memfasilitasi pegawai dalam melakukan permohonan peminjaman Barang Milik Negara (BMN) dan penyewaan ruang studio secara digital dan terintegrasi.
-          </p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px;">
+          <div class="card">
+            <h3 class="card-title" style="font-size: 1rem;"><i class="fa-solid fa-chart-pie"></i> Status Aset</h3>
+            <div style="position: relative; height: 300px; width: 100%; display: flex; justify-content: center;">
+              <canvas id="donutChart"></canvas>
+            </div>
+          </div>
+          <div class="card">
+            <h3 class="card-title" style="font-size: 1rem;"><i class="fa-solid fa-chart-line"></i> Trend Peminjaman (6 Bulan)</h3>
+            <div style="position: relative; height: 300px; width: 100%;">
+              <canvas id="lineChart"></canvas>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -453,8 +469,16 @@
           <div id="alert-peminjaman" class="alert"></div>
           <div class="stats-grid" style="grid-template-columns: 1fr 1fr; gap: 16px;">
             <div class="form-group">
+              <label>Nama Pemohon</label>
+              <input type="text" id="peminjaman-nama" class="form-control" placeholder="Nama Lengkap">
+            </div>
+            <div class="form-group">
+              <label>NIP Pemohon</label>
+              <input type="text" id="peminjaman-nip" class="form-control" placeholder="NIP">
+            </div>
+            <div class="form-group">
               <label>Pilih Barang</label>
-              <select id="select-barang" class="form-control">
+              <select id="select-barang" class="form-control" style="background: var(--surface);">
                 <option value="">Memuat data barang...</option>
               </select>
             </div>
@@ -464,11 +488,11 @@
             </div>
             <div class="form-group">
               <label>Tanggal Pinjam</label>
-              <input type="date" id="tgl-pinjam" class="form-control">
+              <input type="date" id="tgl-pinjam" class="form-control" style="color-scheme: dark;">
             </div>
             <div class="form-group">
               <label>Tanggal Kembali</label>
-              <input type="date" id="tgl-kembali" class="form-control">
+              <input type="date" id="tgl-kembali" class="form-control" style="color-scheme: dark;">
             </div>
           </div>
           <button class="btn btn-primary" onclick="submitPeminjaman()" style="width: auto;">Ajukan Peminjaman</button>
@@ -482,8 +506,16 @@
           <div id="alert-penyewaan" class="alert"></div>
           <div class="stats-grid" style="grid-template-columns: 1fr 1fr; gap: 16px;">
             <div class="form-group">
+              <label>Nama Pemohon</label>
+              <input type="text" id="penyewaan-nama" class="form-control" placeholder="Nama Lengkap">
+            </div>
+            <div class="form-group">
+              <label>NIP Pemohon</label>
+              <input type="text" id="penyewaan-nip" class="form-control" placeholder="NIP">
+            </div>
+            <div class="form-group">
               <label>Pilih Ruang</label>
-              <select id="select-ruang" class="form-control">
+              <select id="select-ruang" class="form-control" style="background: var(--surface);">
                 <option value="">Memuat data ruang...</option>
               </select>
             </div>
@@ -493,11 +525,11 @@
             </div>
             <div class="form-group">
               <label>Waktu Mulai</label>
-              <input type="datetime-local" id="waktu-mulai" class="form-control">
+              <input type="datetime-local" id="waktu-mulai" class="form-control" style="color-scheme: dark;">
             </div>
             <div class="form-group">
               <label>Waktu Selesai</label>
-              <input type="datetime-local" id="waktu-selesai" class="form-control">
+              <input type="datetime-local" id="waktu-selesai" class="form-control" style="color-scheme: dark;">
             </div>
           </div>
           <button class="btn btn-primary" onclick="submitPenyewaan()" style="width: auto;">Ajukan Penyewaan</button>
@@ -531,7 +563,12 @@
       <!-- VIEW: LAPORAN -->
       <div id="view-laporan" class="view-section">
         <div class="card">
-          <h3 class="card-title">Log & Riwayat</h3>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <h3 class="card-title" style="margin-bottom:0;">Log & Riwayat</h3>
+            <button class="btn btn-secondary" style="width:auto; padding: 8px 16px;" onclick="downloadExcel()">
+              <i class="fa-solid fa-file-excel"></i> Download Excel
+            </button>
+          </div>
           <div class="table-responsive">
             <table id="table-laporan">
               <thead>
@@ -583,7 +620,9 @@
     let dataRuang = [];
 
     // Date
-    document.getElementById('date-display').innerText = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    let d = new Date();
+    document.getElementById('date-display').innerText = d.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    document.getElementById('dash-date').innerText = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
     // Mock Backend (for local UI testing without GAS)
     const IS_GAS = typeof google !== 'undefined' && google.script;
@@ -620,7 +659,13 @@
         setTimeout(() => {
           btnText.style.display = 'block'; loader.style.display = 'none';
           if(pass !== '12345@') return showAlert('login-alert', 'Password salah', 'error');
-          let role = nip === 'admin' ? 'Admin' : nip === 'kepala' ? 'Kepala Kantor' : nip === 'pengelola' ? 'Pengelola BMN' : 'Pegawai';
+          let role = "Pegawai";
+          if(nip === 'admin') role = 'Admin';
+          else if(nip === 'kepala') role = 'Kepala Kantor';
+          else if(nip === 'bmn') role = 'Pengelola BMN';
+          else if(nip === 'lobby') role = 'Pengelola Ruang';
+          else if(nip !== 'pegawai') return showAlert('login-alert', 'User tidak ditemukan', 'error');
+          
           setupUserSession({success: true, role: role, name: 'User ' + nip, nip: nip});
         }, 1000);
       }
@@ -659,8 +704,14 @@
         document.getElementById('nav-laporan').style.display = 'flex';
         document.getElementById('nav-monitoring').style.display = 'flex';
       }
+      // Pre-fill forms
+      document.getElementById('peminjaman-nama').value = user.name;
+      document.getElementById('peminjaman-nip').value = user.nip;
+      document.getElementById('penyewaan-nama').value = user.name;
+      document.getElementById('penyewaan-nip').value = user.nip;
       
       loadDashboardData();
+      setTimeout(renderCharts, 500); // Give time for UI to render
     }
 
     function logout() {
@@ -755,14 +806,16 @@
     }
 
     function submitPeminjaman() {
+      const nama = document.getElementById('peminjaman-nama').value;
+      const nipPemohon = document.getElementById('peminjaman-nip').value;
       const brg = document.getElementById('select-barang').value;
       const tuju = document.getElementById('tujuan-pinjam').value;
       const tglP = document.getElementById('tgl-pinjam').value;
       const tglK = document.getElementById('tgl-kembali').value;
       
-      if(!brg || !tglP || !tglK) return showAlert('alert-peminjaman', 'Semua field wajib diisi!', 'error');
+      if(!nama || !nipPemohon || !brg || !tglP || !tglK) return showAlert('alert-peminjaman', 'Field Nama, NIP, Barang, dan Tanggal wajib diisi!', 'error');
 
-      const payload = { "NIP": currentUser.nip, "Nama": currentUser.name, "Barang": brg, "Tujuan": tuju, "Tanggal Pinjam": tglP, "Tanggal Kembali": tglK };
+      const payload = { "NIP": nipPemohon, "Nama": nama, "Barang": brg, "Tujuan": tuju, "Tanggal Pinjam": tglP, "Tanggal Kembali": tglK };
       
       if(IS_GAS) {
         google.script.run.withSuccessHandler(res => {
@@ -775,14 +828,16 @@
     }
 
     function submitPenyewaan() {
+      const nama = document.getElementById('penyewaan-nama').value;
+      const nipPemohon = document.getElementById('penyewaan-nip').value;
       const ruang = document.getElementById('select-ruang').value;
       const acara = document.getElementById('acara-ruang').value;
       const tglM = document.getElementById('waktu-mulai').value;
       const tglS = document.getElementById('waktu-selesai').value;
       
-      if(!ruang || !tglM || !tglS) return showAlert('alert-penyewaan', 'Semua field wajib diisi!', 'error');
+      if(!nama || !nipPemohon || !ruang || !tglM || !tglS) return showAlert('alert-penyewaan', 'Field Nama, NIP, Ruang, dan Tanggal wajib diisi!', 'error');
 
-      const payload = { "NIP": currentUser.nip, "Nama": currentUser.name, "Ruang": ruang, "Acara": acara, "Waktu Mulai": tglM, "Waktu Selesai": tglS };
+      const payload = { "NIP": nipPemohon, "Nama": nama, "Ruang": ruang, "Acara": acara, "Waktu Mulai": tglM, "Waktu Selesai": tglS };
       
       if(IS_GAS) {
         google.script.run.withSuccessHandler(res => {
@@ -792,6 +847,97 @@
       } else {
         showAlert('alert-penyewaan', 'Pengajuan berhasil dikirim (Mock Mode)', 'success');
       }
+    }
+
+    function downloadExcel() {
+      const table = document.getElementById('table-laporan');
+      if (!table) return;
+      
+      const tableHTML = table.outerHTML.replace(/ /g, '%20');
+      const filename = 'Laporan_SIMBA.xls';
+      
+      const downloadLink = document.createElement("a");
+      document.body.appendChild(downloadLink);
+      downloadLink.href = 'data:application/vnd.ms-excel,' + tableHTML;
+      downloadLink.download = filename;
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    }
+
+    let donutChartInstance = null;
+    let lineChartInstance = null;
+    
+    function renderCharts() {
+      if(!document.getElementById('donutChart')) return;
+      
+      const ctxDonut = document.getElementById('donutChart').getContext('2d');
+      if(donutChartInstance) donutChartInstance.destroy();
+      
+      donutChartInstance = new Chart(ctxDonut, {
+        type: 'doughnut',
+        data: {
+          labels: ['Tersedia', 'Dipinjam', 'Tidak Tersedia'],
+          datasets: [{
+            data: [8, 3, 1],
+            backgroundColor: ['#10B981', '#3B82F6', '#F59E0B'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: '#94A3B8' } }
+          },
+          cutout: '65%'
+        }
+      });
+
+      const ctxLine = document.getElementById('lineChart').getContext('2d');
+      if(lineChartInstance) lineChartInstance.destroy();
+      
+      lineChartInstance = new Chart(ctxLine, {
+        type: 'line',
+        data: {
+          labels: ['Nov', 'Des', 'Jan', 'Feb', 'Mar', 'Apr'],
+          datasets: [
+            {
+              label: 'Peminjaman',
+              data: [8, 12, 15, 10, 18, 14],
+              borderColor: '#3B82F6',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              tension: 0.4,
+              fill: true
+            },
+            {
+              label: 'Pengembalian',
+              data: [7, 11, 14, 9, 16, 12],
+              borderColor: '#10B981',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              tension: 0.4,
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { color: '#94A3B8' } }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: { color: '#334155' },
+              ticks: { color: '#94A3B8' }
+            },
+            x: {
+              grid: { color: '#334155' },
+              ticks: { color: '#94A3B8' }
+            }
+          }
+        }
+      });
     }
   </script>
 </body>

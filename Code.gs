@@ -16,19 +16,18 @@ function login(nip, password) {
     return { success: false, message: "Password salah! Gunakan password default." };
   }
   try {
-    // Daftar pengguna (Admin, Pengelola, Kepala Kantor)
-    const predefinedUsers = {
-      "197605122008121001": { role: "Pengelola BMN", name: "ARWAN" },
-      "198512062010122001": { role: "Pengelola BMN", name: "WENI SETYOWATI" },
-      "196911022007011001": { role: "Pengelola BMN", name: "WATAM" },
-      "199811162025062004": { role: "Pengelola BMN", name: "WIWIT PUSPITA UTAMI" },
-      "199811262025061001": { role: "Admin", name: "ISA YASYFIN ITTAQILAH" },
-      "198306232008121003": { role: "Pengelola Ruang", name: "SUHANDA" },
-      "197807032005021001": { role: "Kepala Kantor", name: "MUHAMMAD ADIWIBOWO SOEDARMO" }
+    // Daftar role berdasarkan input shortcut
+    const roleMapping = {
+      "pegawai": { role: "Pegawai", name: "Pegawai Demo" },
+      "bmn": { role: "Pengelola BMN", name: "Pengelola BMN Demo" },
+      "lobby": { role: "Pengelola Ruang", name: "Pengelola Ruang Demo" },
+      "kepala": { role: "Kepala Kantor", name: "Kepala Kantor Demo" },
+      "admin": { role: "Admin", name: "Admin Demo" }
     };
     
-    if (predefinedUsers[nip]) {
-      return { success: true, role: predefinedUsers[nip].role, name: predefinedUsers[nip].name, nip: nip };
+    let userKey = nip.toString().toLowerCase().trim();
+    if (roleMapping[userKey]) {
+      return { success: true, role: roleMapping[userKey].role, name: roleMapping[userKey].name, nip: nip };
     }
 
     const ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
