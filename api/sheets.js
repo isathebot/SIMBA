@@ -8,44 +8,38 @@ const PENYEWAAN_HEADERS = ["NIP", "Nama", "Ruang", "Acara", "Waktu Mulai", "Wakt
 function getAuth() {
   const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
   let privateKey = process.env.GOOGLE_PRIVATE_KEY || '';
-  // Handle escaped newlines from Vercel environment
   privateKey = privateKey.replace(/\\n/g, '\n');
-
   if (!clientEmail || !privateKey) {
-    throw new Error('GOOGLE_CLIENT_EMAIL atau GOOGLE_PRIVATE_KEY belum diatur di Environment Variables Vercel.');
+    throw new Error('GOOGLE_CLIENT_EMAIL atau GOOGLE_PRIVATE_KEY belum diatur.');
   }
-
   return new google.auth.JWT(clientEmail, null, privateKey, [
     'https://www.googleapis.com/auth/spreadsheets'
   ]);
 }
 
 function getSheetsClient() {
-  const auth = getAuth();
-  return google.sheets({ version: 'v4', auth });
+  return google.sheets({ version: 'v4', auth: getAuth() });
 }
 
-// Ensure a sheet tab exists; create it with headers if not
+// Ensure sheet exists AND always fix headers to match expected
 async function ensureSheet(sheets, sheetName, headers) {
   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
   const existing = spreadsheet.data.sheets.map(s => s.properties.title);
 
   if (!existing.includes(sheetName)) {
-    // Create the sheet tab
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId: SPREADSHEET_ID,
-      requestBody: {
-        requests: [{ addSheet: { properties: { title: sheetName } } }]
-      }
-    });
-    // Write header row
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${sheetName}!A1`,
-      valueInputOption: 'RAW',
-      requestBody: { values: [headers] }
+      requestBody: { requests: [{ addSheet: { properties: { title: sheetName } } }] }
     });
   }
+
+  // Always force correct headers on row 1
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${sheetName}!A1:${String.fromCharCode(64 + headers.length)}1`,
+    valueInputOption: 'RAW',
+    requestBody: { values: [headers] }
+  });
 }
 
 // Read all data rows from a sheet
@@ -57,7 +51,6 @@ async function readSheet(sheets, sheetName) {
     });
     const rows = response.data.values;
     if (!rows || rows.length < 2) return [];
-
     const headers = rows[0];
     return rows.slice(1).map((row, i) => {
       const obj = { _rowIndex: i + 2 };
@@ -70,7 +63,6 @@ async function readSheet(sheets, sheetName) {
 }
 
 module.exports = async function handler(req, res) {
-  // Allow CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -80,28 +72,24 @@ module.exports = async function handler(req, res) {
   const { action, payload } = req.body || {};
 
   try {
-    // ===================== LOGIN (no Sheets needed) =====================
+    // ===================== LOGIN =====================
     if (action === 'login') {
       const { nip, password } = payload;
       if (password !== '12345@') return res.json({ success: false, message: 'Password salah!' });
-
       const roles = {
-        admin:   { role: 'Admin',          name: 'Administrator' },
-        pegawai: { role: 'Pegawai',        name: 'Pegawai BBPK' },
-        bmn:     { role: 'Pengelola BMN',  name: 'Pengelola BMN' },
+        admin:   { role: 'Admin',           name: 'Administrator' },
+        pegawai: { role: 'Pegawai',         name: 'Pegawai BBPK' },
+        bmn:     { role: 'Pengelola BMN',   name: 'Pengelola BMN' },
         lobby:   { role: 'Pengelola Ruang', name: 'Pengelola Ruangan' },
-        kepala:  { role: 'Kepala Kantor',  name: 'Kepala Kantor' }
+        kepala:  { role: 'Kepala Kantor',   name: 'Kepala Kantor' }
       };
-
       const key = (nip || '').toString().toLowerCase().trim();
       if (roles[key]) return res.json({ success: true, ...roles[key], nip });
       return res.json({ success: false, message: 'User tidak ditemukan.' });
     }
 
-    // ============= All actions below need Google Sheets =============
+    // ===== All actions below need Google Sheets =====
     const sheets = getSheetsClient();
-
-    // Ensure both tabs exist with headers
     await ensureSheet(sheets, 'Peminjaman', PEMINJAMAN_HEADERS);
     await ensureSheet(sheets, 'Penyewaan', PENYEWAAN_HEADERS);
 
@@ -135,7 +123,7 @@ module.exports = async function handler(req, res) {
         requestBody: { values: [rowData] }
       });
 
-      return res.json({ success: true, message: 'Pengajuan berhasil disimpan ke database!' });
+      return res.json({ success: true, message: 'Pengajuan berhasil!' });
     }
 
     // ===================== UPDATE STATUS =====================
@@ -144,7 +132,6 @@ module.exports = async function handler(req, res) {
       const sheetName = type === 'Barang' ? 'Peminjaman' : 'Penyewaan';
       const headers = type === 'Barang' ? PEMINJAMAN_HEADERS : PENYEWAAN_HEADERS;
       const colIndex = headers.indexOf('Status');
-
       if (colIndex === -1) return res.json({ success: false, message: 'Kolom Status tidak ditemukan.' });
 
       const colLetter = String.fromCharCode(65 + colIndex);
@@ -154,7 +141,6 @@ module.exports = async function handler(req, res) {
         valueInputOption: 'USER_ENTERED',
         requestBody: { values: [[status]] }
       });
-
       return res.json({ success: true, message: `Status diubah menjadi ${status}` });
     }
 
@@ -162,13 +148,9 @@ module.exports = async function handler(req, res) {
     if (action === 'deleteRow') {
       const { type, rowIndex } = payload;
       const sheetName = type === 'Barang' ? 'Peminjaman' : 'Penyewaan';
-
-      // Get sheetId (numeric ID for batchUpdate)
       const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
       const sheetObj = spreadsheet.data.sheets.find(s => s.properties.title === sheetName);
       if (!sheetObj) return res.json({ success: false, message: 'Tab tidak ditemukan.' });
-
-      const sheetId = sheetObj.properties.sheetId;
 
       await sheets.spreadsheets.batchUpdate({
         spreadsheetId: SPREADSHEET_ID,
@@ -176,7 +158,7 @@ module.exports = async function handler(req, res) {
           requests: [{
             deleteDimension: {
               range: {
-                sheetId: sheetId,
+                sheetId: sheetObj.properties.sheetId,
                 dimension: 'ROWS',
                 startIndex: rowIndex - 1,
                 endIndex: rowIndex
@@ -185,11 +167,10 @@ module.exports = async function handler(req, res) {
           }]
         }
       });
-
       return res.json({ success: true, message: 'Data berhasil dihapus.' });
     }
-    return res.status(400).json({ success: false, message: 'Action tidak dikenal.' });
 
+    return res.status(400).json({ success: false, message: 'Action tidak dikenal.' });
   } catch (error) {
     console.error('API Error:', error.message);
     return res.status(500).json({ success: false, message: error.message });

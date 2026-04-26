@@ -431,24 +431,24 @@
       </div>
       
       <div class="nav-menu">
-        <a class="nav-item active" id="nav-dashboard" onclick="switchView('dashboard')">
+        <a class="nav-item active" id="nav-dashboard" onclick="switchView('dashboard', event)">
           <i class="fa-solid fa-chart-pie"></i> Dashboard
         </a>
-        <a class="nav-item" id="nav-peminjaman" onclick="switchView('peminjaman')">
+        <a class="nav-item" id="nav-peminjaman" onclick="switchView('peminjaman', event)">
           <i class="fa-solid fa-laptop"></i> Peminjaman Barang
         </a>
-        <a class="nav-item" id="nav-penyewaan" onclick="switchView('penyewaan')">
+        <a class="nav-item" id="nav-penyewaan" onclick="switchView('penyewaan', event)">
           <i class="fa-solid fa-door-open"></i> Penyewaan Ruang
         </a>
         
         <!-- Role Specific Menus -->
-        <a class="nav-item" id="nav-verifikasi" style="display:none;" onclick="switchView('verifikasi')">
+        <a class="nav-item" id="nav-verifikasi" style="display:none;" onclick="switchView('verifikasi', event)">
           <i class="fa-solid fa-clipboard-check"></i> Verifikasi
         </a>
-        <a class="nav-item" id="nav-laporan" style="display:none;" onclick="switchView('laporan')">
+        <a class="nav-item" id="nav-laporan" style="display:none;" onclick="switchView('laporan', event)">
           <i class="fa-solid fa-file-lines"></i> Laporan & Log
         </a>
-        <a class="nav-item" id="nav-monitoring" style="display:none;" onclick="switchView('monitoring')">
+        <a class="nav-item" id="nav-monitoring" style="display:none;" onclick="switchView('monitoring', event)">
           <i class="fa-solid fa-desktop"></i> Monitoring
         </a>
       </div>
@@ -519,8 +519,9 @@
                 <tr>
                   <th>Tipe</th>
                   <th>Pemohon</th>
-                  <th>Item / Ruang</th>
-                  <th>Waktu Pengajuan</th>
+                  <th>Detail</th>
+                  <th>Periode</th>
+                  <th>Diajukan</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -632,8 +633,8 @@
                 <tr>
                   <th>Tipe</th>
                   <th>Pemohon</th>
-                  <th>Item / Ruang</th>
-                  <th>Tanggal</th>
+                  <th>Detail</th>
+                  <th>Periode</th>
                   <th>Aksi</th>
                 </tr>
               </thead>
@@ -660,9 +661,10 @@
                 <tr>
                   <th>Tipe</th>
                   <th>Pemohon</th>
-                  <th>Item / Ruang</th>
+                  <th>Detail</th>
+                  <th>Periode</th>
+                  <th>Diajukan</th>
                   <th>Status</th>
-                  <th>Waktu Pengajuan</th>
                 </tr>
               </thead>
               <tbody>
@@ -842,11 +844,18 @@
       document.getElementById('login-screen').style.display = 'flex';
     }
 
-    function switchView(viewId) {
+    function switchView(viewId, evt) {
       document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
       document.getElementById(`view-${viewId}`).classList.add('active');
       document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-      event.currentTarget.classList.add('active');
+      if (evt && evt.currentTarget) {
+        evt.currentTarget.classList.add('active');
+      } else {
+        // Highlight the matching nav item
+        const navMap = { 'dashboard': 'nav-dashboard', 'peminjaman': 'nav-peminjaman', 'penyewaan': 'nav-penyewaan', 'verifikasi': 'nav-verifikasi', 'laporan': 'nav-laporan', 'monitoring': 'nav-monitoring' };
+        const navEl = document.getElementById(navMap[viewId]);
+        if (navEl) navEl.classList.add('active');
+      }
       
       const titles = {
         'dashboard': 'Dashboard Overview',
@@ -899,7 +908,7 @@
       let laporanHtml = '';
 
       if (db.length === 0) {
-        riwayatHtml = verifikasiHtml = laporanHtml = `<tr><td colspan="5" style="text-align:center;">Belum ada data online</td></tr>`;
+        riwayatHtml = verifikasiHtml = laporanHtml = `<tr><td colspan="6" style="text-align:center;">Belum ada data pengajuan</td></tr>`;
       } else {
         [...db].reverse().forEach((row) => {
           let isPending = row.Status === 'Menunggu Verifikasi';
@@ -907,8 +916,13 @@
           if (isPending || isApproved) pendingCount++;
           if (row.Status === 'Terlambat') lateCount++;
           
-          let badgeClass = isPending ? 'badge-pending' : (row.Status === 'Disetujui' ? 'badge-approved' : 'badge-rejected');
-          let itemStr = row.Barang || row.Ruang || "-";
+          let badgeClass = isPending ? 'badge-pending' : (isApproved ? 'badge-approved' : 'badge-rejected');
+          let detailStr = row.tipe === 'Barang' 
+            ? `<strong>${row.Barang || '-'}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Keperluan: ${row.Tujuan || '-'}</span>` 
+            : `<strong>${row.Ruang || '-'}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Kegiatan: ${row.Acara || '-'}</span>`;
+          let periodeStr = row.tipe === 'Barang'
+            ? `${row['Tanggal Pinjam'] || '-'} s/d ${row['Tanggal Kembali'] || '-'}`
+            : `${row['Waktu Mulai'] || '-'} s/d ${row['Waktu Selesai'] || '-'}`;
           
           let deleteBtn = '';
           if (currentUser.role === 'Admin') {
@@ -917,10 +931,11 @@
 
           let tr = `<tr>
             <td><span style="background:rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">${row.tipe}</span></td>
-            <td><strong>${row.Nama}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">${row.NIP}</span></td>
-            <td>${itemStr}</td>
-            <td>${row['Tanggal Pengajuan'] || "-"}</td>
-            <td><span class="badge ${badgeClass}">${row.Status}</span>${deleteBtn}</td>
+            <td><strong>${row.Nama || '-'}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">NIP: ${row.NIP || '-'}</span></td>
+            <td>${detailStr}</td>
+            <td style="font-size:0.85rem;">${periodeStr}</td>
+            <td style="font-size:0.8rem;">${row['Tanggal Pengajuan'] || "-"}</td>
+            <td><span class="badge ${badgeClass}">${row.Status || '-'}</span>${deleteBtn}</td>
           </tr>`;
           
           riwayatHtml += tr;
@@ -935,9 +950,9 @@
             if (canVerify) {
               verifikasiHtml += `<tr>
                 <td><span style="background:rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">${row.tipe}</span></td>
-                <td><strong>${row.Nama}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">${row.NIP}</span></td>
-                <td>${itemStr}</td>
-                <td>${row['Tanggal Pengajuan'] || "-"}</td>
+                <td><strong>${row.Nama || '-'}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">NIP: ${row.NIP || '-'}</span></td>
+                <td>${detailStr}</td>
+                <td style="font-size:0.85rem;">${periodeStr}</td>
                 <td>
                   <button class="btn btn-primary" style="padding: 4px 8px; width: auto; font-size: 0.8rem;" onclick="updateStatus('${row.tipe}', ${row._rowIndex}, 'Disetujui')">Setujui</button>
                   <button class="btn btn-secondary" style="background: rgba(239, 68, 68, 0.2); color: #EF4444; padding: 4px 8px; width: auto; font-size: 0.8rem;" onclick="updateStatus('${row.tipe}', ${row._rowIndex}, 'Ditolak')">Tolak</button>
@@ -947,8 +962,6 @@
           }
         });
       }
-
-      if (verifikasiHtml === '') verifikasiHtml = `<tr><td colspan="5" style="text-align:center;">Tidak ada permohonan baru</td></tr>`;
 
       document.getElementById('stat-pending').innerText = pendingCount;
       document.getElementById('stat-terlambat').innerText = lateCount;
