@@ -35,10 +35,8 @@
     /* Glassmorphism utilities */
     .glass {
       background: var(--surface-glass);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15);
     }
 
     /* Login Screen */
@@ -262,7 +260,6 @@
     /* Forms */
     .card {
       background: var(--surface-glass);
-      backdrop-filter: blur(12px);
       border-radius: 20px;
       padding: 32px;
       border: 1px solid var(--border);
@@ -678,20 +675,56 @@
       <!-- VIEW: MONITORING -->
       <div id="view-monitoring" class="view-section">
         <div class="card">
-          <h3 class="card-title">Monitoring Kegiatan Pengelola BMN</h3>
-          <p style="color:var(--text-muted); flex-shrink: 0;">Halaman ini khusus untuk Kepala Kantor memantau kinerja persetujuan/penolakan BMN.</p>
-          <div class="stats-grid" style="margin-top:20px; flex-shrink: 0;">
+          <h3 class="card-title"><i class="fa-solid fa-chart-line"></i> Monitoring Kegiatan</h3>
+          <p style="color:var(--text-muted); margin-bottom: 20px;">Halaman ini menampilkan statistik persetujuan dan penolakan secara real-time dari database.</p>
+          <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+            <div class="stat-card" style="background: rgba(245, 158, 11, 0.1); border: 1px solid #F59E0B;">
+              <div class="stat-icon" style="background: rgba(245, 158, 11, 0.2); color: #FBBF24;"><i class="fa-solid fa-hourglass-half"></i></div>
+              <div class="stat-info">
+                <h3 id="monitor-pending" style="color:#FBBF24;">0</h3>
+                <p>Menunggu</p>
+              </div>
+            </div>
             <div class="stat-card" style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10B981;">
-              <div>
-                <h3 style="color:#10B981; font-size:2rem;">15</h3>
-                <p>Disetujui Bulan Ini</p>
+              <div class="stat-icon" style="background: rgba(16, 185, 129, 0.2); color: #34D399;"><i class="fa-solid fa-check-circle"></i></div>
+              <div class="stat-info">
+                <h3 id="monitor-approved" style="color:#10B981;">0</h3>
+                <p>Disetujui</p>
               </div>
             </div>
             <div class="stat-card" style="background: rgba(239, 68, 68, 0.1); border: 1px solid #EF4444;">
-              <div>
-                <h3 style="color:#EF4444; font-size:2rem;">2</h3>
-                <p>Ditolak Bulan Ini</p>
+              <div class="stat-icon" style="background: rgba(239, 68, 68, 0.2); color: #F87171;"><i class="fa-solid fa-times-circle"></i></div>
+              <div class="stat-info">
+                <h3 id="monitor-rejected" style="color:#EF4444;">0</h3>
+                <p>Ditolak</p>
               </div>
+            </div>
+            <div class="stat-card" style="background: rgba(79, 70, 229, 0.1); border: 1px solid #4F46E5;">
+              <div class="stat-icon" style="background: rgba(79, 70, 229, 0.2); color: #818CF8;"><i class="fa-solid fa-database"></i></div>
+              <div class="stat-info">
+                <h3 id="monitor-total" style="color:#818CF8;">0</h3>
+                <p>Total Pengajuan</p>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin-top: 20px;">
+            <h3 class="card-title" style="font-size:1rem;"><i class="fa-solid fa-list"></i> Semua Riwayat Pengajuan</h3>
+            <div class="table-responsive">
+              <table id="table-monitoring">
+                <thead>
+                  <tr>
+                    <th>Tipe</th>
+                    <th>Pemohon</th>
+                    <th>Detail</th>
+                    <th>Periode</th>
+                    <th>Diajukan</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="6" style="text-align:center;">Memuat data...</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -917,6 +950,7 @@
           if (row.Status === 'Terlambat') lateCount++;
           
           let badgeClass = isPending ? 'badge-pending' : (isApproved ? 'badge-approved' : 'badge-rejected');
+          let badgeLabel = isPending ? 'Menunggu' : (isApproved ? 'Disetujui' : (row.Status || '-'));
           let detailStr = row.tipe === 'Barang' 
             ? `<strong>${row.Barang || '-'}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Keperluan: ${row.Tujuan || '-'}</span>` 
             : `<strong>${row.Ruang || '-'}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Kegiatan: ${row.Acara || '-'}</span>`;
@@ -935,7 +969,7 @@
             <td>${detailStr}</td>
             <td style="font-size:0.85rem;">${periodeStr}</td>
             <td style="font-size:0.8rem;">${row['Tanggal Pengajuan'] || "-"}</td>
-            <td><span class="badge ${badgeClass}">${row.Status || '-'}</span>${deleteBtn}</td>
+            <td><span class="badge ${badgeClass}">${badgeLabel}</span>${deleteBtn}</td>
           </tr>`;
           
           riwayatHtml += tr;
@@ -962,6 +996,24 @@
           }
         });
       }
+
+      // Update monitoring stats
+      let monitorPending = 0, monitorApproved = 0, monitorRejected = 0;
+      let monitoringHtml = '';
+      db.forEach(row => {
+        if (row.Status === 'Menunggu Verifikasi') monitorPending++;
+        else if (row.Status === 'Disetujui') monitorApproved++;
+        else if (row.Status === 'Ditolak') monitorRejected++;
+      });
+      const monEl = (id) => document.getElementById(id);
+      if (monEl('monitor-pending')) monEl('monitor-pending').innerText = monitorPending;
+      if (monEl('monitor-approved')) monEl('monitor-approved').innerText = monitorApproved;
+      if (monEl('monitor-rejected')) monEl('monitor-rejected').innerText = monitorRejected;
+      if (monEl('monitor-total')) monEl('monitor-total').innerText = db.length;
+
+      // Build monitoring table (same as riwayat)
+      const monTable = document.querySelector('#table-monitoring tbody');
+      if (monTable) monTable.innerHTML = riwayatHtml || `<tr><td colspan="6" style="text-align:center;">Belum ada data</td></tr>`;
 
       document.getElementById('stat-pending').innerText = pendingCount;
       document.getElementById('stat-terlambat').innerText = lateCount;
