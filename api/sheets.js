@@ -63,9 +63,6 @@ export default async function handler(req, res) {
   const { action, payload } = req.body;
   
   try {
-    const auth = getAuth();
-    const sheets = google.sheets({ version: 'v4', auth });
-    
     if (action === 'login') {
       const { nip, password } = payload;
       if (password !== "12345@") {
@@ -88,7 +85,11 @@ export default async function handler(req, res) {
       return res.json({ success: false, message: "User tidak ditemukan." });
     }
     
-    else if (action === 'getBarang') {
+    // Actions below this line REQUIRE Google Sheets Auth
+    const auth = getAuth();
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    if (action === 'getBarang') {
       const data = await fetchSheetData(sheets, ["Barang", "Data Barang", "Inventaris"]);
       return res.json({ success: true, data });
     }
