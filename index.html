@@ -688,7 +688,9 @@
         i.classList.remove('fa-eye-slash');
         i.classList.add('fa-eye');
       }
-    }    async function handleLogin() {
+    }
+
+    async function handleLogin() {
       const nip = document.getElementById('nip').value;
       const pass = document.getElementById('password').value;
       const btnText = document.querySelector('#btn-login .btn-text');
@@ -707,7 +709,7 @@
       } else {
         showAlert('login-alert', res.message, 'error');
       }
-    } }
+    }
 
     function setupUserSession(user) {
       currentUser = user;
@@ -780,7 +782,9 @@
       document.getElementById('page-title').innerText = titles[viewId];
       
       if(window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
-    }    async function loadDashboardData() {
+    }
+
+    async function loadDashboardData() {
       const defaultBarang = [
         "Laptop (3100102002)", "PC (3100102001)", "Printer (3100203003)", "Penghancur Kertas (3050105015)",
         "Kamera (3050206020)", "Mobil Dinas (Avanza) (3020102003)", "Mobil Dinas (Innova) (3020101003)",
