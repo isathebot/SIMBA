@@ -158,6 +158,36 @@ module.exports = async function handler(req, res) {
       return res.json({ success: true, message: `Status diubah menjadi ${status}` });
     }
 
+    // ===================== DELETE ROW =====================
+    if (action === 'deleteRow') {
+      const { type, rowIndex } = payload;
+      const sheetName = type === 'Barang' ? 'Peminjaman' : 'Penyewaan';
+
+      // Get sheetId (numeric ID for batchUpdate)
+      const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+      const sheetObj = spreadsheet.data.sheets.find(s => s.properties.title === sheetName);
+      if (!sheetObj) return res.json({ success: false, message: 'Tab tidak ditemukan.' });
+
+      const sheetId = sheetObj.properties.sheetId;
+
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requestBody: {
+          requests: [{
+            deleteDimension: {
+              range: {
+                sheetId: sheetId,
+                dimension: 'ROWS',
+                startIndex: rowIndex - 1,
+                endIndex: rowIndex
+              }
+            }
+          }]
+        }
+      });
+
+      return res.json({ success: true, message: 'Data berhasil dihapus.' });
+    }
     return res.status(400).json({ success: false, message: 'Action tidak dikenal.' });
 
   } catch (error) {

@@ -327,6 +327,61 @@
     }
     .alert.error { background: #FEE2E2; color: #DC2626; display: block; border: 1px solid #F87171; }
     .alert.success { background: #D1FAE5; color: #059669; display: block; border: 1px solid #34D399; }
+    .alert.pending { background: rgba(245, 158, 11, 0.15); color: #F59E0B; display: block; border: 1px solid #F59E0B; }
+
+    /* Custom Modal Popup */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px;
+      text-align: center;
+      max-width: 420px;
+      width: 90%;
+      animation: fadeIn 0.3s ease-out;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .modal-icon { font-size: 3.5rem; margin-bottom: 16px; }
+    .modal-icon.success { color: #10B981; }
+    .modal-icon.error { color: #EF4444; }
+    .modal-icon.info { color: #3B82F6; }
+    .modal-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
+    .modal-message { color: var(--text-muted); margin-bottom: 24px; line-height: 1.5; }
+    .modal-btn {
+      padding: 12px 32px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--primary);
+      color: white;
+      transition: 0.2s;
+    }
+    .modal-btn:hover { background: var(--primary-hover); transform: scale(1.02); }
+    .btn-delete {
+      background: rgba(239, 68, 68, 0.15);
+      color: #EF4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 600;
+      transition: 0.2s;
+    }
+    .btn-delete:hover { background: rgba(239, 68, 68, 0.3); }
   </style>
 </head>
 <body>
@@ -643,6 +698,16 @@
     </div>
   </div>
 
+  <!-- Custom Modal Popup -->
+  <div class="modal-overlay" id="custom-modal">
+    <div class="modal-box">
+      <div class="modal-icon" id="modal-icon"></div>
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-message" id="modal-message"></div>
+      <button class="modal-btn" onclick="closeModal()">OK</button>
+    </div>
+  </div>
+
   <script>
     // State
     let currentUser = null;
@@ -674,6 +739,18 @@
       el.innerText = msg;
       el.style.display = 'block';
       setTimeout(() => { el.style.display = 'none'; el.className = 'alert'; }, 5000);
+    }
+
+    function showModal(title, message, type) {
+      const iconMap = { success: '✅', error: '❌', info: 'ℹ️' };
+      document.getElementById('modal-icon').innerText = iconMap[type] || '✅';
+      document.getElementById('modal-icon').className = `modal-icon ${type}`;
+      document.getElementById('modal-title').innerText = title;
+      document.getElementById('modal-message').innerText = message;
+      document.getElementById('custom-modal').classList.add('active');
+    }
+    function closeModal() {
+      document.getElementById('custom-modal').classList.remove('active');
     }
 
     function togglePassword() {
@@ -833,12 +910,17 @@
           let badgeClass = isPending ? 'badge-pending' : (row.Status === 'Disetujui' ? 'badge-approved' : 'badge-rejected');
           let itemStr = row.Barang || row.Ruang || "-";
           
+          let deleteBtn = '';
+          if (currentUser.role === 'Admin') {
+            deleteBtn = ` <button class="btn-delete" onclick="deleteRow('${row.tipe}', ${row._rowIndex})">🗑 Hapus</button>`;
+          }
+
           let tr = `<tr>
             <td><span style="background:rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">${row.tipe}</span></td>
             <td><strong>${row.Nama}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">${row.NIP}</span></td>
             <td>${itemStr}</td>
             <td>${row['Tanggal Pengajuan'] || "-"}</td>
-            <td><span class="badge ${badgeClass}">${row.Status}</span></td>
+            <td><span class="badge ${badgeClass}">${row.Status}</span>${deleteBtn}</td>
           </tr>`;
           
           riwayatHtml += tr;
@@ -878,10 +960,21 @@
     async function updateStatus(type, rowIndex, status) {
       const res = await apiCall('updateStatus', { type, rowIndex, status });
       if (res && res.success) {
-        alert(`Berhasil memperbarui status menjadi: ${status}`);
+        showModal('BERHASIL!', `Status telah diubah menjadi: ${status}`, 'success');
         loadDashboardData();
       } else {
-        alert("Gagal memperbarui status.");
+        showModal('GAGAL', 'Gagal memperbarui status. Coba lagi.', 'error');
+      }
+    }
+
+    async function deleteRow(type, rowIndex) {
+      if (!confirm('Apakah Anda yakin ingin menghapus data ini?')) return;
+      const res = await apiCall('deleteRow', { type, rowIndex });
+      if (res && res.success) {
+        showModal('TERHAPUS!', 'Data berhasil dihapus dari database.', 'success');
+        loadDashboardData();
+      } else {
+        showModal('GAGAL', res.message || 'Gagal menghapus data.', 'error');
       }
     }
 
@@ -901,7 +994,7 @@
       const res = await apiCall('submitForm', payload);
       
       if(res && res.success) {
-        alert("✅ SUKSES!\n\nPengajuan Anda telah tersimpan di database online.");
+        showModal('SUKSES!', 'Pengajuanmu telah berhasil terekam! Data sedang menunggu verifikasi.', 'success');
         document.getElementById('peminjaman-nama').value = '';
         document.getElementById('peminjaman-nip').value = '';
         loadDashboardData();
@@ -927,7 +1020,7 @@
       const res = await apiCall('submitForm', payload);
       
       if(res && res.success) {
-        alert("✅ SUKSES!\n\nPenyewaan ruang telah tersimpan di database online.");
+        showModal('SUKSES!', 'Pengajuan penyewaan ruang telah berhasil terekam! Data sedang menunggu verifikasi.', 'success');
         document.getElementById('penyewaan-nama').value = '';
         document.getElementById('penyewaan-nip').value = '';
         loadDashboardData();
