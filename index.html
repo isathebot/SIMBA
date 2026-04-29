@@ -216,11 +216,16 @@
 
     .header {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
+      flex-direction: column;
+      align-items: flex-start;
+      margin-bottom: 32px;
+      gap: 8px;
     }
-    .header h1 { font-size: 1.8rem; font-weight: 700; color: var(--text-main); }
+    .header-top {
+      display: flex;
+      align-items: center;
+    }
+    .header h1 { font-size: 1.8rem; font-weight: 700; color: var(--text-main); margin: 0; }
 
     .view-section { display: none; animation: fadeIn 0.4s ease-out; }
     .view-section.active { display: block; }
@@ -472,9 +477,11 @@
     <!-- Main Content -->
     <div class="main-content">
       <div class="header">
-        <i class="fa-solid fa-bars" id="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')"></i>
-        <h1 id="page-title">Dashboard Overview</h1>
-        <div id="date-display" style="color: var(--text-muted); font-weight: 500;"></div>
+        <div class="header-top">
+          <i class="fa-solid fa-bars" id="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')"></i>
+          <h1 id="page-title">Dashboard Overview</h1>
+        </div>
+        <div id="date-display" style="color: var(--text-muted); font-weight: 500; font-size: 0.95rem;"></div>
       </div>
 
       <!-- VIEW: DASHBOARD -->
@@ -560,11 +567,10 @@
 
       <!-- VIEW: PEMINJAMAN BARANG -->
       <div id="view-peminjaman" class="view-section">
-        <div class="card">
-          <div style="max-width: 800px; margin: 0 auto;">
-            <h3 class="card-title">Formulir Peminjaman Barang</h3>
-            <div id="alert-peminjaman" class="alert"></div>
-            <div style="display: flex; flex-direction: column; gap: 24px; margin-bottom: 24px;">
+        <div class="card" style="max-width: 600px; margin: 0 auto;">
+          <h3 class="card-title">Formulir Peminjaman Barang</h3>
+          <div id="alert-peminjaman" class="alert"></div>
+          <div style="display: flex; flex-direction: column; gap: 24px; margin-bottom: 24px;">
               <div class="form-group">
                 <label>Nama Pemohon</label>
                 <input type="text" id="peminjaman-nama" class="form-control" placeholder="Nama Lengkap">
@@ -600,17 +606,15 @@
               </div>
             </div>
             <button class="btn btn-primary" onclick="submitPeminjaman()" style="width: 100%;">Ajukan Peminjaman</button>
-          </div>
         </div>
       </div>
 
       <!-- VIEW: PEMINJAMAN RUANG -->
       <div id="view-penyewaan" class="view-section">
-        <div class="card">
-          <div style="max-width: 800px; margin: 0 auto;">
-            <h3 class="card-title">Formulir Peminjaman Ruang</h3>
-            <div id="alert-penyewaan" class="alert"></div>
-            <div style="display: flex; flex-direction: column; gap: 24px; margin-bottom: 24px;">
+        <div class="card" style="max-width: 600px; margin: 0 auto;">
+          <h3 class="card-title">Formulir Peminjaman Ruang</h3>
+          <div id="alert-penyewaan" class="alert"></div>
+          <div style="display: flex; flex-direction: column; gap: 24px; margin-bottom: 24px;">
               <div class="form-group">
                 <label>Nama Pemohon</label>
                 <input type="text" id="penyewaan-nama" class="form-control" placeholder="Nama Lengkap">
@@ -641,17 +645,15 @@
               </div>
             </div>
             <button class="btn btn-primary" onclick="submitPenyewaan()" style="width: 100%;">Ajukan Peminjaman Ruang</button>
-          </div>
         </div>
       </div>
 
       <!-- VIEW: PENGEMBALIAN BARANG -->
       <div id="view-pengembalian" class="view-section">
-        <div class="card">
-          <div style="max-width: 800px; margin: 0 auto;">
-            <h3 class="card-title"><i class="fa-solid fa-rotate-left"></i> Formulir Pengembalian Barang</h3>
-            <div id="alert-pengembalian" class="alert"></div>
-            <div style="display: flex; flex-direction: column; gap: 24px; margin-bottom: 24px;">
+        <div class="card" style="max-width: 600px; margin: 0 auto;">
+          <h3 class="card-title"><i class="fa-solid fa-rotate-left"></i> Formulir Pengembalian Barang</h3>
+          <div id="alert-pengembalian" class="alert"></div>
+          <div style="display: flex; flex-direction: column; gap: 24px; margin-bottom: 24px;">
               <div class="form-group">
                 <label>Nama Pemohon</label>
                 <input type="text" id="pengembalian-nama" class="form-control" placeholder="Nama Lengkap">
@@ -683,17 +685,15 @@
               </div>
             </div>
             <button class="btn btn-primary" onclick="submitPengembalian()" style="width: 100%;">Ajukan Pengembalian</button>
-          </div>
         </div>
       </div>
 
       <!-- VIEW: LAPOR KELUHAN -->
       <div id="view-keluhan" class="view-section">
-        <div class="card">
-          <div style="max-width: 800px; margin: 0 auto;">
-            <h3 class="card-title"><i class="fa-solid fa-bug"></i> Formulir Lapor Keluhan</h3>
-            <div id="alert-keluhan" class="alert"></div>
-            <div style="display: flex; flex-direction: column; gap: 24px; margin-bottom: 24px;">
+        <div class="card" style="max-width: 600px; margin: 0 auto;">
+          <h3 class="card-title"><i class="fa-solid fa-bug"></i> Formulir Lapor Keluhan</h3>
+          <div id="alert-keluhan" class="alert"></div>
+          <div style="display: flex; flex-direction: column; gap: 24px; margin-bottom: 24px;">
               <div class="form-group">
                 <label>Nama Pelapor</label>
                 <input type="text" id="keluhan-nama" class="form-control" placeholder="Nama Lengkap">
@@ -726,7 +726,6 @@
               </div>
             </div>
             <button class="btn btn-primary" onclick="submitKeluhan()" style="width: 100%;">Kirim Laporan</button>
-          </div>
         </div>
       </div>
 
