@@ -4,8 +4,8 @@ const SPREADSHEET_ID = "1P7AkTA9Qb1WLDYkl3xdUO9XHiOk6pid3c98PmETA6os";
 
 const PEMINJAMAN_HEADERS = ["NIP", "Nama", "Barang", "Tujuan", "Tanggal Pinjam", "Tanggal Kembali", "Status", "Tanggal Pengajuan", "Alasan Penolakan"];
 const PENYEWAAN_HEADERS = ["NIP", "Nama", "Ruang", "Acara", "Waktu Mulai", "Waktu Selesai", "Status", "Tanggal Pengajuan", "Alasan Penolakan"];
-const PENGEMBALIAN_HEADERS = ["NIP", "Nama", "Barang", "Kondisi", "Tanggal Pengembalian", "Catatan", "Tanggal Pengajuan"];
-const KELUHAN_HEADERS = ["NIP", "Nama", "Barang", "Jenis", "Deskripsi", "Tanggal Kejadian", "Tanggal Pengajuan"];
+const PENGEMBALIAN_HEADERS = ["NIP", "Nama", "Barang", "Kondisi", "Tanggal Pengembalian", "Catatan", "Status", "Tanggal Pengajuan", "Alasan Penolakan"];
+const KELUHAN_HEADERS = ["NIP", "Nama", "Barang", "Jenis", "Deskripsi", "Tanggal Kejadian", "Status", "Tanggal Pengajuan", "Alasan Penolakan"];
 
 function getAuth() {
   const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
@@ -111,9 +111,13 @@ module.exports = async function handler(req, res) {
     if (action === 'getHistory') {
       const pData = await readSheet(sheets, 'Peminjaman');
       const rData = await readSheet(sheets, 'Penyewaan');
+      const pengData = await readSheet(sheets, 'Pengembalian');
+      const kData = await readSheet(sheets, 'Keluhan');
       const history = [
         ...pData.map(d => ({ ...d, tipe: 'Barang' })),
-        ...rData.map(d => ({ ...d, tipe: 'Ruangan' }))
+        ...rData.map(d => ({ ...d, tipe: 'Ruangan' })),
+        ...pengData.map(d => ({ ...d, tipe: 'Pengembalian' })),
+        ...kData.map(d => ({ ...d, tipe: 'Keluhan' }))
       ];
       return res.json({ success: true, data: history });
     }
@@ -144,8 +148,14 @@ module.exports = async function handler(req, res) {
     // ===================== UPDATE STATUS =====================
     if (action === 'updateStatus') {
       const { type, rowIndex, status, reason } = payload;
-      const sheetName = type === 'Barang' ? 'Peminjaman' : 'Penyewaan';
-      const headers = type === 'Barang' ? PEMINJAMAN_HEADERS : PENYEWAAN_HEADERS;
+      
+      let sheetName, headers;
+      if (type === 'Barang') { sheetName = 'Peminjaman'; headers = PEMINJAMAN_HEADERS; }
+      else if (type === 'Ruangan') { sheetName = 'Penyewaan'; headers = PENYEWAAN_HEADERS; }
+      else if (type === 'Pengembalian') { sheetName = 'Pengembalian'; headers = PENGEMBALIAN_HEADERS; }
+      else if (type === 'Keluhan') { sheetName = 'Keluhan'; headers = KELUHAN_HEADERS; }
+      else { return res.json({ success: false, message: 'Tipe tidak valid.' }); }
+
       const colIndex = headers.indexOf('Status');
       if (colIndex === -1) return res.json({ success: false, message: 'Kolom Status tidak ditemukan.' });
 
@@ -177,7 +187,14 @@ module.exports = async function handler(req, res) {
     // ===================== DELETE ROW =====================
     if (action === 'deleteRow') {
       const { type, rowIndex } = payload;
-      const sheetName = type === 'Barang' ? 'Peminjaman' : 'Penyewaan';
+      
+      let sheetName;
+      if (type === 'Barang') sheetName = 'Peminjaman';
+      else if (type === 'Ruangan') sheetName = 'Penyewaan';
+      else if (type === 'Pengembalian') sheetName = 'Pengembalian';
+      else if (type === 'Keluhan') sheetName = 'Keluhan';
+      else return res.json({ success: false, message: 'Tipe tidak valid.' });
+
       const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
       const sheetObj = spreadsheet.data.sheets.find(s => s.properties.title === sheetName);
       if (!sheetObj) return res.json({ success: false, message: 'Tab tidak ditemukan.' });

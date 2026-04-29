@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     :root {
       --primary: #4F46E5;
@@ -558,79 +559,172 @@
       <!-- VIEW: PEMINJAMAN BARANG -->
       <div id="view-peminjaman" class="view-section">
         <div class="card">
-          <h3 class="card-title">Formulir Peminjaman Barang</h3>
-          <div id="alert-peminjaman" class="alert"></div>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 24px;">
-            <div class="form-group">
-              <label>Nama Pemohon</label>
-              <input type="text" id="peminjaman-nama" class="form-control" placeholder="Nama Lengkap">
+          <div style="max-width: 800px; margin: 0 auto;">
+            <h3 class="card-title">Formulir Peminjaman Barang</h3>
+            <div id="alert-peminjaman" class="alert"></div>
+            <div style="display: flex; flex-direction: column; gap: 24px; margin-bottom: 24px;">
+              <div class="form-group">
+                <label>Nama Pemohon</label>
+                <input type="text" id="peminjaman-nama" class="form-control" placeholder="Nama Lengkap">
+              </div>
+              <div class="form-group">
+                <label>NIP Pemohon</label>
+                <input type="text" id="peminjaman-nip" class="form-control" placeholder="NIP">
+              </div>
+              <div class="form-group">
+                <label>Pilih Barang</label>
+                <input type="text" id="search-barang" class="form-control" placeholder="🔍 Cari barang..." style="margin-bottom: 8px;" oninput="filterBarang()">
+                <select id="select-barang" class="form-control" style="background: var(--surface);" onchange="toggleCustomBarang()">
+                  <option value="">Pilih Barang...</option>
+                </select>
+              </div>
+              <div class="form-group" id="custom-barang-group" style="display:none;">
+                <label>Tulis Nama Barang</label>
+                <input type="text" id="custom-barang" class="form-control" placeholder="Tulis nama barang yang belum tersedia">
+              </div>
+              <div class="form-group">
+                <label>Tujuan Peminjaman</label>
+                <input type="text" id="tujuan-pinjam" class="form-control" placeholder="Contoh: Rapat Koordinasi">
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                <div class="form-group">
+                  <label>Tanggal Pinjam</label>
+                  <input type="date" id="tgl-pinjam" class="form-control" style="color-scheme: dark;">
+                </div>
+                <div class="form-group">
+                  <label>Tanggal Kembali</label>
+                  <input type="date" id="tgl-kembali" class="form-control" style="color-scheme: dark;">
+                </div>
+              </div>
             </div>
-            <div class="form-group">
-              <label>NIP Pemohon</label>
-              <input type="text" id="peminjaman-nip" class="form-control" placeholder="NIP">
-            </div>
-            <div class="form-group">
-              <label>Pilih Barang</label>
-              <input type="text" id="search-barang" class="form-control" placeholder="🔍 Cari barang..." style="margin-bottom: 8px;" oninput="filterBarang()">
-              <select id="select-barang" class="form-control" style="background: var(--surface);" onchange="toggleCustomBarang()">
-                <option value="">Pilih Barang...</option>
-              </select>
-            </div>
-            <div class="form-group" id="custom-barang-group" style="display:none;">
-              <label>Tulis Nama Barang</label>
-              <input type="text" id="custom-barang" class="form-control" placeholder="Tulis nama barang yang belum tersedia">
-            </div>
-            <div class="form-group">
-              <label>Tujuan Peminjaman</label>
-              <input type="text" id="tujuan-pinjam" class="form-control" placeholder="Contoh: Rapat Koordinasi">
-            </div>
-            <div class="form-group">
-              <label>Tanggal Pinjam</label>
-              <input type="date" id="tgl-pinjam" class="form-control" style="color-scheme: dark;">
-            </div>
-            <div class="form-group">
-              <label>Tanggal Kembali</label>
-              <input type="date" id="tgl-kembali" class="form-control" style="color-scheme: dark;">
-            </div>
+            <button class="btn btn-primary" onclick="submitPeminjaman()" style="width: 100%;">Ajukan Peminjaman</button>
           </div>
-          <button class="btn btn-primary" onclick="submitPeminjaman()" style="width: auto;">Ajukan Peminjaman</button>
         </div>
       </div>
 
       <!-- VIEW: PEMINJAMAN RUANG -->
       <div id="view-penyewaan" class="view-section">
         <div class="card">
-          <h3 class="card-title">Formulir Peminjaman Ruang</h3>
-          <div id="alert-penyewaan" class="alert"></div>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 24px;">
-            <div class="form-group">
-              <label>Nama Pemohon</label>
-              <input type="text" id="penyewaan-nama" class="form-control" placeholder="Nama Lengkap">
+          <div style="max-width: 800px; margin: 0 auto;">
+            <h3 class="card-title">Formulir Peminjaman Ruang</h3>
+            <div id="alert-penyewaan" class="alert"></div>
+            <div style="display: flex; flex-direction: column; gap: 24px; margin-bottom: 24px;">
+              <div class="form-group">
+                <label>Nama Pemohon</label>
+                <input type="text" id="penyewaan-nama" class="form-control" placeholder="Nama Lengkap">
+              </div>
+              <div class="form-group">
+                <label>NIP Pemohon</label>
+                <input type="text" id="penyewaan-nip" class="form-control" placeholder="NIP">
+              </div>
+              <div class="form-group">
+                <label>Pilih Ruang</label>
+                <select id="select-ruang" class="form-control" style="background: var(--surface);">
+                  <option value="">Memuat data ruang...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Acara / Kegiatan</label>
+                <input type="text" id="acara-ruang" class="form-control" placeholder="Nama Kegiatan">
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                <div class="form-group">
+                  <label>Waktu Mulai</label>
+                  <input type="datetime-local" id="waktu-mulai" class="form-control" style="color-scheme: dark;">
+                </div>
+                <div class="form-group">
+                  <label>Waktu Selesai</label>
+                  <input type="datetime-local" id="waktu-selesai" class="form-control" style="color-scheme: dark;">
+                </div>
+              </div>
             </div>
-            <div class="form-group">
-              <label>NIP Pemohon</label>
-              <input type="text" id="penyewaan-nip" class="form-control" placeholder="NIP">
-            </div>
-            <div class="form-group">
-              <label>Pilih Ruang</label>
-              <select id="select-ruang" class="form-control" style="background: var(--surface);">
-                <option value="">Memuat data ruang...</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Acara / Kegiatan</label>
-              <input type="text" id="acara-ruang" class="form-control" placeholder="Nama Kegiatan">
-            </div>
-            <div class="form-group">
-              <label>Waktu Mulai</label>
-              <input type="datetime-local" id="waktu-mulai" class="form-control" style="color-scheme: dark;">
-            </div>
-            <div class="form-group">
-              <label>Waktu Selesai</label>
-              <input type="datetime-local" id="waktu-selesai" class="form-control" style="color-scheme: dark;">
-            </div>
+            <button class="btn btn-primary" onclick="submitPenyewaan()" style="width: 100%;">Ajukan Peminjaman Ruang</button>
           </div>
-          <button class="btn btn-primary" onclick="submitPenyewaan()" style="width: auto;">Ajukan Peminjaman Ruang</button>
+        </div>
+      </div>
+
+      <!-- VIEW: PENGEMBALIAN BARANG -->
+      <div id="view-pengembalian" class="view-section">
+        <div class="card">
+          <div style="max-width: 800px; margin: 0 auto;">
+            <h3 class="card-title"><i class="fa-solid fa-rotate-left"></i> Formulir Pengembalian Barang</h3>
+            <div id="alert-pengembalian" class="alert"></div>
+            <div style="display: flex; flex-direction: column; gap: 24px; margin-bottom: 24px;">
+              <div class="form-group">
+                <label>Nama Pemohon</label>
+                <input type="text" id="pengembalian-nama" class="form-control" placeholder="Nama Lengkap">
+              </div>
+              <div class="form-group">
+                <label>NIP Pemohon</label>
+                <input type="text" id="pengembalian-nip" class="form-control" placeholder="NIP">
+              </div>
+              <div class="form-group">
+                <label>Nama Barang yang Dikembalikan</label>
+                <input type="text" id="pengembalian-barang" class="form-control" placeholder="Sebutkan nama dan spesifikasi barang">
+              </div>
+              <div class="form-group">
+                <label>Kondisi Barang</label>
+                <select id="pengembalian-kondisi" class="form-control" style="background: var(--surface);">
+                  <option value="">Pilih Kondisi...</option>
+                  <option value="Baik">Baik (Berfungsi Normal)</option>
+                  <option value="Rusak Ringan">Rusak Ringan (Bisa Digunakan, Ada Cacat)</option>
+                  <option value="Rusak Berat">Rusak Berat (Tidak Bisa Digunakan)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Tanggal Pengembalian</label>
+                <input type="date" id="pengembalian-tanggal" class="form-control" style="color-scheme: dark;">
+              </div>
+              <div class="form-group">
+                <label>Catatan Tambahan (Opsional)</label>
+                <textarea id="pengembalian-catatan" class="form-control" placeholder="Catatan mengenai kelengkapan atau kondisi barang" rows="3"></textarea>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="submitPengembalian()" style="width: 100%;">Ajukan Pengembalian</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW: LAPOR KELUHAN -->
+      <div id="view-keluhan" class="view-section">
+        <div class="card">
+          <div style="max-width: 800px; margin: 0 auto;">
+            <h3 class="card-title"><i class="fa-solid fa-bug"></i> Formulir Lapor Keluhan</h3>
+            <div id="alert-keluhan" class="alert"></div>
+            <div style="display: flex; flex-direction: column; gap: 24px; margin-bottom: 24px;">
+              <div class="form-group">
+                <label>Nama Pelapor</label>
+                <input type="text" id="keluhan-nama" class="form-control" placeholder="Nama Lengkap">
+              </div>
+              <div class="form-group">
+                <label>NIP Pelapor</label>
+                <input type="text" id="keluhan-nip" class="form-control" placeholder="NIP">
+              </div>
+              <div class="form-group">
+                <label>Nama Barang / Fasilitas</label>
+                <input type="text" id="keluhan-barang" class="form-control" placeholder="Nama barang/fasilitas yang bermasalah">
+              </div>
+              <div class="form-group">
+                <label>Jenis Keluhan</label>
+                <select id="keluhan-jenis" class="form-control" style="background: var(--surface);">
+                  <option value="">Pilih Jenis Keluhan...</option>
+                  <option value="Kerusakan Fisik">Kerusakan Fisik</option>
+                  <option value="Tidak Berfungsi">Tidak Berfungsi / Error</option>
+                  <option value="Kehilangan">Kehilangan</option>
+                  <option value="Lainnya">Lainnya</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Deskripsi Kerusakan / Keluhan</label>
+                <textarea id="keluhan-deskripsi" class="form-control" placeholder="Jelaskan secara detail masalah yang terjadi" rows="4"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Tanggal Kejadian</label>
+                <input type="date" id="keluhan-tanggal" class="form-control" style="color-scheme: dark;">
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="submitKeluhan()" style="width: 100%;">Kirim Laporan</button>
+          </div>
         </div>
       </div>
 
@@ -663,9 +757,14 @@
         <div class="card">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-shrink: 0;">
             <h3 class="card-title" style="margin-bottom:0;">Log & Riwayat</h3>
-            <button class="btn btn-secondary" style="width:auto; padding: 8px 16px;" onclick="downloadExcel()">
-              <i class="fa-solid fa-file-excel"></i> Download Excel
-            </button>
+            <div style="display: flex; gap: 10px;">
+              <button class="btn btn-secondary" style="width:auto; padding: 8px 16px; background: #EF4444;" onclick="downloadPDF()">
+                <i class="fa-solid fa-file-pdf"></i> Download PDF
+              </button>
+              <button class="btn btn-secondary" style="width:auto; padding: 8px 16px;" onclick="downloadExcel()">
+                <i class="fa-solid fa-file-excel"></i> Download Excel
+              </button>
+            </div>
           </div>
           <div class="table-responsive">
             <table id="table-laporan">
@@ -852,6 +951,27 @@
         <button class="modal-btn" style="background: var(--border);" onclick="closeRejectModal()">Batal</button>
       </div>
     </div>
+  </div>
+
+  <!-- Hidden PDF Container for Export -->
+  <div id="pdf-container" style="display: none; padding: 20px; background: white; color: black; font-family: 'Inter', sans-serif;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <div>
+          <h2 style="color: #00A69C; margin: 0; font-size: 26px; font-weight: 700;">Kemenkes</h2>
+          <p style="color: #666; margin: 0; font-size: 16px; font-weight: 600;">Corporate University</p>
+        </div>
+      </div>
+      <div style="text-align: right;">
+        <h2 style="color: #00A69C; margin: 0; font-size: 22px; font-weight: 700;">Kementerian Kesehatan</h2>
+        <h3 style="color: #666; margin: 0; font-size: 16px; font-weight: 600;">Sekretariat Jenderal</h3>
+        <p style="color: #888; margin: 0; font-size: 14px;">Balai Besar Pelatihan Kesehatan Jakarta</p>
+        <p style="color: #888; margin: 4px 0 0; font-size: 12px;">📍 Jalan Wijaya Kusuma No.45, Jakarta Selatan, 12430</p>
+        <p style="color: #888; margin: 0; font-size: 12px;">☎ 021-7657625 | 🌐 https://bbpkjakarta.kemkes.go.id</p>
+      </div>
+    </div>
+    <h3 style="text-align: center; margin-bottom: 20px; font-size: 18px; font-weight: 700; color: #000;">LAPORAN LOG & RIWAYAT</h3>
+    <div id="pdf-table-container"></div>
   </div>
 
   <script>
@@ -1057,6 +1177,9 @@
         ]
       };
       const defaultRuang = [
+        { group: 'Studio', items: ["Studio 1", "Studio 2", "Studio 3", "Studio 4"] },
+        { group: 'Studio ULP', items: ["Studio ULP 1", "Studio ULP 2", "Studio ULP 3"] },
+        { group: 'Zoom Pod', items: ["Zoom Pod 1", "Zoom Pod 2", "Zoom Pod 3"] },
         { group: 'Ruang Kelas', items: ["Ruang Kelas Alpine","Ruang Kelas Bangau","Ruang Kelas Cendrawasih","Ruang Kelas Dara","Ruang Kelas Elang","Ruang Kelas Flamingo","Ruang Kelas Kenari"] },
         { group: 'Ruang Rapat', items: ["Ruang Rapat Gelatik","Ruang Rapat Merpati","Ruang Rapat Nuri"] },
         { group: 'Auditorium', items: ["Auditorium Garuda","Auditorium Rajawali"] }
@@ -1106,12 +1229,17 @@
           if (row.Status === 'Ditolak' && row['Alasan Penolakan']) {
             rejectInfo = `<br><span style="font-size:0.75rem; color:#F87171;">Alasan: ${row['Alasan Penolakan']}</span>`;
           }
-          let detailStr = row.tipe === 'Barang' 
-            ? `<strong>${row.Barang || '-'}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Keperluan: ${row.Tujuan || '-'}</span>` 
-            : `<strong>${row.Ruang || '-'}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Kegiatan: ${row.Acara || '-'}</span>`;
-          let periodeStr = row.tipe === 'Barang'
-            ? `${row['Tanggal Pinjam'] || '-'} s/d ${row['Tanggal Kembali'] || '-'}`
-            : `${row['Waktu Mulai'] || '-'} s/d ${row['Waktu Selesai'] || '-'}`;
+          let detailStr = '';
+          if (row.tipe === 'Barang') detailStr = `<strong>${row.Barang || '-'}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Keperluan: ${row.Tujuan || '-'}</span>`;
+          else if (row.tipe === 'Ruangan') detailStr = `<strong>${row.Ruang || '-'}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Kegiatan: ${row.Acara || '-'}</span>`;
+          else if (row.tipe === 'Pengembalian') detailStr = `<strong>${row.Barang || '-'}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Kondisi: ${row.Kondisi || '-'}</span>`;
+          else if (row.tipe === 'Keluhan') detailStr = `<strong>${row.Barang || '-'}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Masalah: ${row.Jenis || '-'}</span>`;
+
+          let periodeStr = '';
+          if (row.tipe === 'Barang') periodeStr = `${row['Tanggal Pinjam'] || '-'} s/d ${row['Tanggal Kembali'] || '-'}`;
+          else if (row.tipe === 'Ruangan') periodeStr = `${row['Waktu Mulai'] || '-'} s/d ${row['Waktu Selesai'] || '-'}`;
+          else if (row.tipe === 'Pengembalian') periodeStr = row['Tanggal Pengembalian'] || '-';
+          else if (row.tipe === 'Keluhan') periodeStr = row['Tanggal Kejadian'] || '-';
           
           let deleteBtn = '';
           if (currentUser.role === 'Admin') {
@@ -1133,7 +1261,7 @@
           if (isPending) {
             let canVerify = false;
             if (currentUser.role === 'Admin') canVerify = true;
-            if (currentUser.role === 'Pengelola BMN' && row.tipe === 'Barang') canVerify = true;
+            if (currentUser.role === 'Pengelola BMN' && ['Barang', 'Pengembalian', 'Keluhan'].includes(row.tipe)) canVerify = true;
             if (currentUser.role === 'Pengelola Ruang' && row.tipe === 'Ruangan') canVerify = true;
             
             if (canVerify) {
@@ -1392,6 +1520,52 @@
       downloadLink.download = filename;
       downloadLink.click();
       document.body.removeChild(downloadLink);
+    }
+
+    function downloadPDF() {
+      const element = document.getElementById('pdf-container');
+      const table = document.getElementById('table-laporan').cloneNode(true);
+      
+      // Styling for PDF table
+      table.style.width = '100%';
+      table.style.borderCollapse = 'collapse';
+      table.style.fontSize = '12px';
+      
+      const ths = table.querySelectorAll('th');
+      ths.forEach(th => {
+        th.style.border = '1px solid #333';
+        th.style.padding = '8px';
+        th.style.backgroundColor = '#f1f5f9';
+        th.style.color = '#0f172a';
+        th.style.fontWeight = 'bold';
+      });
+      
+      const tds = table.querySelectorAll('td');
+      tds.forEach(td => {
+        td.style.border = '1px solid #333';
+        td.style.padding = '8px';
+        td.style.color = '#0f172a';
+      });
+
+      // Remove bad elements from PDF table
+      table.querySelectorAll('.btn, .btn-delete').forEach(btn => btn.remove());
+
+      const pdfTableContainer = document.getElementById('pdf-table-container');
+      pdfTableContainer.innerHTML = '';
+      pdfTableContainer.appendChild(table);
+
+      const opt = {
+        margin:       10,
+        filename:     'Laporan_SIMBA.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      };
+
+      element.style.display = 'block';
+      html2pdf().set(opt).from(element).save().then(() => {
+        element.style.display = 'none';
+      });
     }
 
     let donutChartInstance = null;
