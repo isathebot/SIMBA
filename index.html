@@ -1260,6 +1260,7 @@
         }
         pag.innerHTML = pagHtml;
       }
+    }
 
     async function updateStatus(type, rowIndex, status) {
       const res = await apiCall('updateStatus', { type, rowIndex, status });
