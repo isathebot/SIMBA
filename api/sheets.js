@@ -2,8 +2,10 @@ const { google } = require('googleapis');
 
 const SPREADSHEET_ID = "1P7AkTA9Qb1WLDYkl3xdUO9XHiOk6pid3c98PmETA6os";
 
-const PEMINJAMAN_HEADERS = ["NIP", "Nama", "Barang", "Tujuan", "Tanggal Pinjam", "Tanggal Kembali", "Status", "Tanggal Pengajuan"];
-const PENYEWAAN_HEADERS = ["NIP", "Nama", "Ruang", "Acara", "Waktu Mulai", "Waktu Selesai", "Status", "Tanggal Pengajuan"];
+const PEMINJAMAN_HEADERS = ["NIP", "Nama", "Barang", "Tujuan", "Tanggal Pinjam", "Tanggal Kembali", "Status", "Tanggal Pengajuan", "Alasan Penolakan"];
+const PENYEWAAN_HEADERS = ["NIP", "Nama", "Ruang", "Acara", "Waktu Mulai", "Waktu Selesai", "Status", "Tanggal Pengajuan", "Alasan Penolakan"];
+const PENGEMBALIAN_HEADERS = ["NIP", "Nama", "Barang", "Kondisi", "Tanggal Pengembalian", "Catatan", "Tanggal Pengajuan"];
+const KELUHAN_HEADERS = ["NIP", "Nama", "Barang", "Jenis", "Deskripsi", "Tanggal Kejadian", "Tanggal Pengajuan"];
 
 function getAuth() {
   const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
@@ -62,6 +64,16 @@ async function readSheet(sheets, sheetName) {
   }
 }
 
+function getSheetConfig(type) {
+  switch (type) {
+    case 'peminjaman': return { sheetName: 'Peminjaman', headers: PEMINJAMAN_HEADERS };
+    case 'penyewaan': return { sheetName: 'Penyewaan', headers: PENYEWAAN_HEADERS };
+    case 'pengembalian': return { sheetName: 'Pengembalian', headers: PENGEMBALIAN_HEADERS };
+    case 'keluhan': return { sheetName: 'Keluhan', headers: KELUHAN_HEADERS };
+    default: return null;
+  }
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -92,6 +104,8 @@ module.exports = async function handler(req, res) {
     const sheets = getSheetsClient();
     await ensureSheet(sheets, 'Peminjaman', PEMINJAMAN_HEADERS);
     await ensureSheet(sheets, 'Penyewaan', PENYEWAAN_HEADERS);
+    await ensureSheet(sheets, 'Pengembalian', PENGEMBALIAN_HEADERS);
+    await ensureSheet(sheets, 'Keluhan', KELUHAN_HEADERS);
 
     // ===================== GET HISTORY =====================
     if (action === 'getHistory') {
@@ -107,18 +121,19 @@ module.exports = async function handler(req, res) {
     // ===================== SUBMIT FORM =====================
     if (action === 'submitForm') {
       const { type, data } = payload;
-      const sheetName = type === 'peminjaman' ? 'Peminjaman' : 'Penyewaan';
-      const headers = type === 'peminjaman' ? PEMINJAMAN_HEADERS : PENYEWAAN_HEADERS;
+      const config = getSheetConfig(type);
+      if (!config) return res.json({ success: false, message: 'Tipe form tidak dikenal.' });
 
-      const rowData = headers.map(h => {
+      const rowData = config.headers.map(h => {
         if (h === 'Status') return 'Menunggu Verifikasi';
+        if (h === 'Alasan Penolakan') return '';
         if (h === 'Tanggal Pengajuan') return new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
         return data[h] || '';
       });
 
       await sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${sheetName}!A:A`,
+        range: `${config.sheetName}!A:A`,
         valueInputOption: 'USER_ENTERED',
         requestBody: { values: [rowData] }
       });
@@ -128,7 +143,7 @@ module.exports = async function handler(req, res) {
 
     // ===================== UPDATE STATUS =====================
     if (action === 'updateStatus') {
-      const { type, rowIndex, status } = payload;
+      const { type, rowIndex, status, reason } = payload;
       const sheetName = type === 'Barang' ? 'Peminjaman' : 'Penyewaan';
       const headers = type === 'Barang' ? PEMINJAMAN_HEADERS : PENYEWAAN_HEADERS;
       const colIndex = headers.indexOf('Status');
@@ -141,6 +156,21 @@ module.exports = async function handler(req, res) {
         valueInputOption: 'USER_ENTERED',
         requestBody: { values: [[status]] }
       });
+
+      // Write rejection reason if provided
+      if (reason && status === 'Ditolak') {
+        const reasonColIndex = headers.indexOf('Alasan Penolakan');
+        if (reasonColIndex !== -1) {
+          const reasonColLetter = String.fromCharCode(65 + reasonColIndex);
+          await sheets.spreadsheets.values.update({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${sheetName}!${reasonColLetter}${rowIndex}`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: { values: [[reason]] }
+          });
+        }
+      }
+
       return res.json({ success: true, message: `Status diubah menjadi ${status}` });
     }
 
