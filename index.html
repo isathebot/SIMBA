@@ -694,7 +694,7 @@
               <h3 id="calendar-month-year" style="margin: 0; font-size: 1.2rem; font-weight: 600;">Mei 2026</h3>
               <button class="btn btn-secondary" style="width: auto; padding: 8px 16px;" onclick="changeMonth(1)"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
-            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center;">
+            <div style="width: 100%; display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center;">
               <div style="font-weight: 600; color: var(--text-muted); padding: 8px;">Min</div>
               <div style="font-weight: 600; color: var(--text-muted); padding: 8px;">Sen</div>
               <div style="font-weight: 600; color: var(--text-muted); padding: 8px;">Sel</div>
@@ -703,7 +703,7 @@
               <div style="font-weight: 600; color: var(--text-muted); padding: 8px;">Jum</div>
               <div style="font-weight: 600; color: var(--text-muted); padding: 8px;">Sab</div>
             </div>
-            <div id="calendar-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 8px;">
+            <div id="calendar-grid" style="width: 100%; display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 8px;">
               <!-- Calendar days will be generated here -->
             </div>
             <div style="margin-top: 16px; font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 16px;">
@@ -1357,7 +1357,7 @@
             let canVerify = false;
             if (currentUser.role === 'Admin') canVerify = true;
             if (currentUser.role === 'Pengelola BMN' && ['Barang', 'Pengembalian', 'Keluhan'].includes(row.tipe)) canVerify = true;
-            if (currentUser.role === 'Pengelola Ruang' && row.tipe === 'Ruangan') canVerify = true;
+            if (currentUser.role === 'Pengelola Ruang' && ['Ruangan', 'Pengembalian', 'Keluhan'].includes(row.tipe)) canVerify = true;
             
             if (canVerify) {
               verifikasiHtml += `<tr>
