@@ -464,9 +464,50 @@
       color: var(--text-muted);
       padding: 0 8px;
     }
+
+    #transition-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: var(--background);
+      z-index: 9999;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+    }
+
+    #transition-loader.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .loader-logo {
+      width: 150px;
+      margin-bottom: 20px;
+      animation: pulse 1.5s infinite;
+      filter: invert(1) hue-rotate(180deg);
+      mix-blend-mode: screen;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.8; }
+      100% { transform: scale(1); opacity: 1; }
+    }
   </style>
 </head>
 <body>
+
+  <!-- Transition Loader -->
+  <div id="transition-loader">
+    <img src="logo.png" alt="Logo SIMBA" class="loader-logo">
+    <h2 style="color: white; margin-top: 20px; font-weight: 500;">Menyiapkan Dashboard...</h2>
+  </div>
 
   <!-- Login Screen -->
   <div id="login-screen">
@@ -1155,7 +1196,9 @@
     function setupUserSession(user) {
       currentUser = user;
       document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('app-layout').style.display = 'flex';
+      
+      const loader = document.getElementById('transition-loader');
+      loader.classList.add('active');
       
       document.getElementById('user-name').innerText = user.name;
       document.getElementById('user-role').innerText = user.role;
@@ -1214,6 +1257,16 @@
       
       loadDashboardData();
       setTimeout(renderCharts, 500);
+      
+      setTimeout(() => {
+        const loader = document.getElementById('transition-loader');
+        loader.style.opacity = '0';
+        setTimeout(() => {
+          loader.classList.remove('active');
+          loader.style.opacity = '';
+          document.getElementById('app-layout').style.display = 'flex';
+        }, 500);
+      }, 1500);
     }
 
     function logout() {
@@ -1385,7 +1438,7 @@
             let canVerify = false;
             if (currentUser.role === 'Admin') canVerify = true;
             if (currentUser.role === 'Pengelola BMN' && ['Barang', 'Pengembalian', 'Keluhan'].includes(row.tipe)) canVerify = true;
-            if (currentUser.role === 'Pengelola Ruang' && ['Ruangan', 'Pengembalian', 'Keluhan'].includes(row.tipe)) canVerify = true;
+            if (currentUser.role === 'Pengelola Ruang' && ['Ruangan'].includes(row.tipe)) canVerify = true;
             
             if (canVerify) {
               verifikasiHtml += `<tr>
@@ -1652,34 +1705,17 @@
 
       const payload = { type: "peminjaman", data: { "NIP": nipPemohon, "Nama": nama, "Barang": brg, "Tujuan": tuju, "Tanggal Pinjam": tglP, "Tanggal Kembali": tglK } };
       
-      showAlert('alert-peminjaman', 'Menyimpan data ke database...', 'pending');
-      const res = await apiCall('submitForm', payload);
+      // Background submission
+      apiCall('submitForm', payload).then(res => {
+        if(res && res.success) loadDashboardData();
+      });
       
-      if(res && res.success) {
-        // Generate QR Code
-        const qrData = `SIMBA BBPK Jakarta\nBarang: ${brg}\nPemohon: ${nama}\nNIP: ${nipPemohon}\nPinjam: ${tglP}\nKembali: ${tglK}`;
-        const qrDiv = document.getElementById('modal-qr');
-        qrDiv.innerHTML = '<canvas id="qr-canvas"></canvas><p style="font-size:0.8rem; color:var(--text-muted); margin-top:8px;">Scan QR untuk info pengembalian</p>';
-        qrDiv.style.display = 'block';
-        
-        showModal('SUKSES!', `Pengajuan berhasil terekam!\nBarang harus dikembalikan pada: ${tglK}`, 'success');
-        
-        // Render QR after modal shows
-        setTimeout(() => {
-          const canvas = document.getElementById('qr-canvas');
-          if (canvas && typeof QRCode !== 'undefined') {
-            QRCode.toCanvas(canvas, qrData, { width: 180, margin: 2, color: { dark: '#1E293B', light: '#F8FAFC' } });
-          }
-        }, 300);
-
-        document.getElementById('peminjaman-nama').value = '';
-        document.getElementById('peminjaman-nip').value = '';
-        document.getElementById('custom-barang').value = '';
-        document.getElementById('custom-barang-group').style.display = 'none';
-        loadDashboardData();
-      } else {
-        showAlert('alert-peminjaman', res.message || 'Gagal menyimpan', 'error');
-      }
+      showModal('SUKSES!', `Pengajuan berhasil terekam!\nBarang harus dikembalikan pada: ${tglK}`, 'success');
+      document.getElementById('peminjaman-nama').value = '';
+      document.getElementById('peminjaman-nip').value = '';
+      document.getElementById('custom-barang').value = '';
+      document.getElementById('custom-barang-group').style.display = 'none';
+      switchView('dashboard');
     }
 
     async function submitPenyewaan() {
@@ -1694,19 +1730,15 @@
 
       const payload = { type: "penyewaan", data: { "NIP": nipPemohon, "Nama": nama, "Ruang": ruang, "Acara": acara, "Waktu Mulai": tglM, "Waktu Selesai": tglS } };
       
-      showAlert('alert-penyewaan', 'Menyimpan data ke database...', 'pending');
-      const res = await apiCall('submitForm', payload);
+      apiCall('submitForm', payload).then(res => {
+        if(res && res.success) loadDashboardData();
+      });
       
-      if(res && res.success) {
-        document.getElementById('modal-penyewaan-form').classList.remove('active');
-        showModal('SUKSES!', 'Pengajuan peminjaman ruang telah berhasil terekam! Data sedang menunggu verifikasi.', 'success');
-        document.getElementById('penyewaan-nama').value = '';
-        document.getElementById('penyewaan-nip').value = '';
-        loadDashboardData();
-        switchView('dashboard');
-      } else {
-        showAlert('alert-penyewaan', res.message || 'Gagal menyimpan', 'error');
-      }
+      document.getElementById('modal-penyewaan-form').classList.remove('active');
+      showModal('SUKSES!', 'Pengajuan peminjaman ruang telah berhasil terekam! Data sedang menunggu verifikasi.', 'success');
+      document.getElementById('penyewaan-nama').value = '';
+      document.getElementById('penyewaan-nip').value = '';
+      switchView('dashboard');
     }
 
     async function submitPengembalian() {
@@ -1720,21 +1752,18 @@
       if (!nama || !nip || !barang || !kondisi || !tanggal) return showAlert('alert-pengembalian', 'Semua field wajib diisi (kecuali catatan)!', 'error');
 
       const payload = { type: "pengembalian", data: { "NIP": nip, "Nama": nama, "Barang": barang, "Kondisi": kondisi, "Tanggal Pengembalian": tanggal, "Catatan": catatan } };
-      showAlert('alert-pengembalian', 'Menyimpan data...', 'pending');
-      const res = await apiCall('submitForm', payload);
-      if (res && res.success) {
-        document.getElementById('modal-pengembalian-form').classList.remove('active');
-        showModal('SUKSES!', 'Pengembalian barang berhasil dicatat.', 'success');
-        document.getElementById('pengembalian-nama').value = '';
-        document.getElementById('pengembalian-nip').value = '';
-        document.getElementById('pengembalian-barang').value = '';
-        document.getElementById('pengembalian-kondisi').value = '';
-        document.getElementById('pengembalian-catatan').value = '';
-        loadDashboardData();
-        switchView('dashboard');
-      } else {
-        showAlert('alert-pengembalian', res.message || 'Gagal menyimpan', 'error');
-      }
+      apiCall('submitForm', payload).then(res => {
+        if(res && res.success) loadDashboardData();
+      });
+      
+      document.getElementById('modal-pengembalian-form').classList.remove('active');
+      showModal('SUKSES!', 'Pengembalian barang berhasil dicatat.', 'success');
+      document.getElementById('pengembalian-nama').value = '';
+      document.getElementById('pengembalian-nip').value = '';
+      document.getElementById('pengembalian-barang').value = '';
+      document.getElementById('pengembalian-kondisi').value = '';
+      document.getElementById('pengembalian-catatan').value = '';
+      switchView('dashboard');
     }
 
     async function submitKeluhan() {
@@ -1748,21 +1777,18 @@
       if (!nama || !nip || !barang || !jenis || !deskripsi || !tanggal) return showAlert('alert-keluhan', 'Semua field wajib diisi!', 'error');
 
       const payload = { type: "keluhan", data: { "NIP": nip, "Nama": nama, "Barang": barang, "Jenis": jenis, "Deskripsi": deskripsi, "Tanggal Kejadian": tanggal } };
-      showAlert('alert-keluhan', 'Mengirim laporan...', 'pending');
-      const res = await apiCall('submitForm', payload);
-      if (res && res.success) {
-        document.getElementById('modal-keluhan-form').classList.remove('active');
-        showModal('TERKIRIM!', 'Laporan keluhan berhasil dikirim. Tim teknis akan menindaklanjuti.', 'success');
-        document.getElementById('keluhan-nama').value = '';
-        document.getElementById('keluhan-nip').value = '';
-        document.getElementById('keluhan-barang').value = '';
-        document.getElementById('keluhan-jenis').value = '';
-        document.getElementById('keluhan-deskripsi').value = '';
-        loadDashboardData();
-        switchView('dashboard');
-      } else {
-        showAlert('alert-keluhan', res.message || 'Gagal mengirim', 'error');
-      }
+      apiCall('submitForm', payload).then(res => {
+        if(res && res.success) loadDashboardData();
+      });
+      
+      document.getElementById('modal-keluhan-form').classList.remove('active');
+      showModal('TERKIRIM!', 'Laporan keluhan berhasil dikirim. Tim teknis akan menindaklanjuti.', 'success');
+      document.getElementById('keluhan-nama').value = '';
+      document.getElementById('keluhan-nip').value = '';
+      document.getElementById('keluhan-barang').value = '';
+      document.getElementById('keluhan-jenis').value = '';
+      document.getElementById('keluhan-deskripsi').value = '';
+      switchView('dashboard');
     }
 
     // List Rendering Logic
