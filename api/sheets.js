@@ -23,6 +23,11 @@ function getSheetsClient() {
   return google.sheets({ version: 'v4', auth: getAuth() });
 }
 
+let cachedHistory = null;
+let lastCacheTime = 0;
+let cachePromise = null;
+const CACHE_TTL = 30000; // 30 seconds
+
 // Ensure sheet exists AND always fix headers to match expected
 async function ensureSheet(sheets, sheetName, headers) {
   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
@@ -109,16 +114,30 @@ module.exports = async function handler(req, res) {
 
     // ===================== GET HISTORY =====================
     if (action === 'getHistory') {
-      const pData = await readSheet(sheets, 'Peminjaman');
-      const rData = await readSheet(sheets, 'Penyewaan');
-      const pengData = await readSheet(sheets, 'Pengembalian');
-      const kData = await readSheet(sheets, 'Keluhan');
-      const history = [
-        ...pData.map(d => ({ ...d, tipe: 'Barang' })),
-        ...rData.map(d => ({ ...d, tipe: 'Ruangan' })),
-        ...pengData.map(d => ({ ...d, tipe: 'Pengembalian' })),
-        ...kData.map(d => ({ ...d, tipe: 'Keluhan' }))
-      ];
+      if (cachedHistory && (Date.now() - lastCacheTime < CACHE_TTL)) {
+        return res.json({ success: true, data: cachedHistory, cached: true });
+      }
+      
+      if (!cachePromise) {
+        cachePromise = (async () => {
+          const pData = await readSheet(sheets, 'Peminjaman');
+          const rData = await readSheet(sheets, 'Penyewaan');
+          const pengData = await readSheet(sheets, 'Pengembalian');
+          const kData = await readSheet(sheets, 'Keluhan');
+          const history = [
+            ...pData.map(d => ({ ...d, tipe: 'Barang' })),
+            ...rData.map(d => ({ ...d, tipe: 'Ruangan' })),
+            ...pengData.map(d => ({ ...d, tipe: 'Pengembalian' })),
+            ...kData.map(d => ({ ...d, tipe: 'Keluhan' }))
+          ];
+          cachedHistory = history;
+          lastCacheTime = Date.now();
+          cachePromise = null;
+          return history;
+        })();
+      }
+      
+      const history = await cachePromise;
       return res.json({ success: true, data: history });
     }
 
@@ -141,6 +160,10 @@ module.exports = async function handler(req, res) {
         valueInputOption: 'USER_ENTERED',
         requestBody: { values: [rowData] }
       });
+
+      // Invalidate cache
+      cachedHistory = null;
+      lastCacheTime = 0;
 
       return res.json({ success: true, message: 'Pengajuan berhasil!' });
     }
@@ -181,6 +204,10 @@ module.exports = async function handler(req, res) {
         }
       }
 
+      // Invalidate cache
+      cachedHistory = null;
+      lastCacheTime = 0;
+
       return res.json({ success: true, message: `Status diubah menjadi ${status}` });
     }
 
@@ -214,6 +241,11 @@ module.exports = async function handler(req, res) {
           }]
         }
       });
+      
+      // Invalidate cache
+      cachedHistory = null;
+      lastCacheTime = 0;
+      
       return res.json({ success: true, message: 'Data berhasil dihapus.' });
     }
 

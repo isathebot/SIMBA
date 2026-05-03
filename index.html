@@ -506,7 +506,7 @@
   <!-- Transition Loader -->
   <div id="transition-loader">
     <img src="logo.png" alt="Logo SIMBA" class="loader-logo">
-    <h2 style="color: white; margin-top: 20px; font-weight: 500;">Menyiapkan Dashboard...</h2>
+    <h2 style="color: white; margin-top: 20px; font-weight: 500;">Selamat datang!</h2>
   </div>
 
   <!-- Login Screen -->
@@ -1387,7 +1387,7 @@
         riwayatHtml = verifikasiHtml = laporanHtml = `<tr><td colspan="6" style="text-align:center;">Belum ada data pengajuan</td></tr>`;
       } else {
         db.forEach((row) => {
-          let isPending = row.Status === 'Menunggu Verifikasi';
+          let isPending = row.Status === 'Menunggu Verifikasi' || row.Status === 'Diteruskan ke BMN';
           let isApproved = row.Status === 'Disetujui';
           let isSelesai = row.Status === 'Selesai';
           if (isPending || isApproved) pendingCount++;
@@ -1437,19 +1437,30 @@
           if (isPending) {
             let canVerify = false;
             if (currentUser.role === 'Admin') canVerify = true;
-            if (currentUser.role === 'Pengelola BMN' && ['Barang', 'Pengembalian', 'Keluhan'].includes(row.tipe)) canVerify = true;
-            if (currentUser.role === 'Pengelola Ruang' && ['Ruangan'].includes(row.tipe)) canVerify = true;
+            if (currentUser.role === 'Pengelola BMN') {
+               if (['Barang', 'Pengembalian'].includes(row.tipe) && row.Status === 'Menunggu Verifikasi') canVerify = true;
+               if (row.tipe === 'Keluhan' && row.Status === 'Diteruskan ke BMN') canVerify = true;
+            }
+            if (currentUser.role === 'Pengelola Ruang') {
+               if (['Ruangan'].includes(row.tipe) && row.Status === 'Menunggu Verifikasi') canVerify = true;
+               if (row.tipe === 'Keluhan' && row.Status === 'Menunggu Verifikasi') canVerify = true;
+            }
             
             if (canVerify) {
+              let actionsHtml = `<button class="btn btn-primary" style="padding: 4px 8px; width: auto; font-size: 0.8rem;" onclick="updateStatus('${row.tipe}', ${row._rowIndex}, 'Disetujui')">Setujui</button>`;
+              
+              if (row.tipe === 'Keluhan' && row.Status === 'Menunggu Verifikasi') {
+                actionsHtml += ` <button class="btn btn-primary" style="background: var(--warning); padding: 4px 8px; width: auto; font-size: 0.8rem;" onclick="updateStatus('${row.tipe}', ${row._rowIndex}, 'Diteruskan ke BMN')">Teruskan ke BMN</button>`;
+              }
+              
+              actionsHtml += ` <button class="btn btn-secondary" style="background: rgba(239, 68, 68, 0.2); color: #EF4444; padding: 4px 8px; width: auto; font-size: 0.8rem;" onclick="openRejectModal('${row.tipe}', ${row._rowIndex})">Tolak</button>`;
+
               verifikasiHtml += `<tr>
                 <td><span style="background:rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">${row.tipe}</span></td>
                 <td><strong>${row.Nama || '-'}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">NIP: ${row.NIP || '-'}</span></td>
                 <td>${detailStr}</td>
                 <td style="font-size:0.85rem;">${periodeStr}</td>
-                <td>
-                  <button class="btn btn-primary" style="padding: 4px 8px; width: auto; font-size: 0.8rem;" onclick="updateStatus('${row.tipe}', ${row._rowIndex}, 'Disetujui')">Setujui</button>
-                  <button class="btn btn-secondary" style="background: rgba(239, 68, 68, 0.2); color: #EF4444; padding: 4px 8px; width: auto; font-size: 0.8rem;" onclick="openRejectModal('${row.tipe}', ${row._rowIndex})">Tolak</button>
-                </td>
+                <td>${actionsHtml}</td>
               </tr>`;
             }
           }
@@ -1460,7 +1471,7 @@
       let monitorPending = 0, monitorApproved = 0, monitorRejected = 0;
       let monitoringHtml = '';
       db.forEach(row => {
-        if (row.Status === 'Menunggu Verifikasi') monitorPending++;
+        if (row.Status === 'Menunggu Verifikasi' || row.Status === 'Diteruskan ke BMN') monitorPending++;
         else if (row.Status === 'Disetujui') monitorApproved++;
         else if (row.Status === 'Ditolak') monitorRejected++;
       });
@@ -1954,8 +1965,8 @@
     function openPenyewaanModal(dateStr) {
       if(!currentUser) { alert('Silakan login terlebih dahulu'); return; }
       
-      document.getElementById('penyewaan-nama').value = currentUser.name;
-      document.getElementById('penyewaan-nip').value = currentUser.nip || '';
+      document.getElementById('penyewaan-nama').value = '';
+      document.getElementById('penyewaan-nip').value = '';
       document.getElementById('select-ruang').value = '';
       document.getElementById('waktu-mulai').value = `${dateStr}T08:00`;
       document.getElementById('waktu-selesai').value = `${dateStr}T16:00`;
