@@ -190,8 +190,8 @@ module.exports = async function handler(req, res) {
         requestBody: { values: [[status]] }
       });
 
-      // Write rejection reason if provided
-      if (reason && status === 'Ditolak') {
+      // Write rejection/cancellation reason if provided
+      if (reason && (status === 'Ditolak' || status === 'Dibatalkan')) {
         const reasonColIndex = headers.indexOf('Alasan Penolakan');
         if (reasonColIndex !== -1) {
           const reasonColLetter = String.fromCharCode(65 + reasonColIndex);

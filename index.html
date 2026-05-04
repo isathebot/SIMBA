@@ -292,6 +292,16 @@
     .badge-approved { background: #D1FAE5; color: #059669; }
     .badge-selesai { background: #E0E7FF; color: #4338CA; }
     .badge-rejected { background: #FEE2E2; color: #DC2626; }
+    .badge-blocked { background: rgba(107,114,128,0.2); color: #9CA3AF; }
+    .badge-cancelled { background: #FEE2E2; color: #DC2626; }
+
+    /* Room classification colors */
+    .room-studio { background: rgba(156,163,175,0.2); border-left: 3px solid #9CA3AF; color: #D1D5DB; }
+    .room-studio-ulp { background: rgba(234,179,8,0.15); border-left: 3px solid #EAB308; color: #FDE047; }
+    .room-zoom-pod { background: rgba(180,83,9,0.2); border-left: 3px solid #B45309; color: #FBBF24; }
+    .room-kelas { background: rgba(34,197,94,0.15); border-left: 3px solid #22C55E; color: #86EFAC; }
+    .room-rapat { background: rgba(239,68,68,0.15); border-left: 3px solid #EF4444; color: #FCA5A5; }
+    .room-auditorium { background: rgba(249,115,22,0.15); border-left: 3px solid #F97316; color: #FDBA74; }
 
     /* Loader */
     .loader {
@@ -489,15 +499,57 @@
     .loader-logo {
       width: 150px;
       margin-bottom: 20px;
-      animation: pulse 1.5s infinite;
+      animation: logoFloat 2s ease-in-out infinite;
       filter: invert(1) hue-rotate(180deg);
       mix-blend-mode: screen;
     }
 
-    @keyframes pulse {
-      0% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.05); opacity: 0.8; }
-      100% { transform: scale(1); opacity: 1; }
+    @keyframes logoFloat {
+      0% { transform: scale(1) translateY(0); opacity: 1; }
+      50% { transform: scale(1.08) translateY(-8px); opacity: 0.85; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    .welcome-text {
+      color: transparent;
+      background: linear-gradient(135deg, #818CF8, #34D399, #FBBF24, #818CF8);
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      animation: welcomeGradient 3s ease infinite, welcomeFadeUp 1s ease-out forwards;
+      opacity: 0;
+      margin-top: 24px;
+    }
+    .welcome-sub {
+      color: var(--text-muted);
+      font-size: 1rem;
+      font-weight: 400;
+      margin-top: 8px;
+      animation: welcomeFadeUp 1s ease-out 0.3s forwards;
+      opacity: 0;
+      letter-spacing: 1px;
+    }
+    @keyframes welcomeGradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    @keyframes welcomeFadeUp {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .welcome-line {
+      width: 60px;
+      height: 3px;
+      background: linear-gradient(90deg, #818CF8, #34D399);
+      border-radius: 3px;
+      margin: 16px auto 0;
+      animation: welcomeFadeUp 1s ease-out 0.5s forwards;
+      opacity: 0;
     }
   </style>
 </head>
@@ -506,7 +558,9 @@
   <!-- Transition Loader -->
   <div id="transition-loader">
     <img src="logo.png" alt="Logo SIMBA" class="loader-logo">
-    <h2 style="color: white; margin-top: 20px; font-weight: 500;">Selamat datang!</h2>
+    <h2 class="welcome-text">Selamat Datang</h2>
+    <p class="welcome-sub">Sistem Informasi Manajemen Barang & Aset</p>
+    <div class="welcome-line"></div>
   </div>
 
   <!-- Login Screen -->
@@ -570,6 +624,9 @@
         <!-- Role Specific Menus -->
         <a class="nav-item" id="nav-verifikasi" style="display:none;" onclick="switchView('verifikasi', event)">
           <i class="fa-solid fa-clipboard-check"></i> Verifikasi
+        </a>
+        <a class="nav-item" id="nav-blokir" style="display:none;" onclick="switchView('blokir', event)">
+          <i class="fa-solid fa-ban"></i> Blokir / Maintenance
         </a>
         <a class="nav-item" id="nav-laporan" style="display:none;" onclick="switchView('laporan', event)">
           <i class="fa-solid fa-file-lines"></i> Laporan & Log
@@ -672,11 +729,19 @@
 
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px;">
           <div class="card" style="margin-bottom: 0;">
-            <h3 class="card-title" style="font-size: 1rem;"><i class="fa-solid fa-chart-pie"></i> Status Aset</h3>
+            <h3 class="card-title" style="font-size: 1rem;"><i class="fa-solid fa-box-open"></i> Status Aset BMN</h3>
             <div style="position: relative; height: 300px; width: 100%; display: flex; justify-content: center;">
               <canvas id="donutChart"></canvas>
             </div>
           </div>
+          <div class="card" style="margin-bottom: 0;">
+            <h3 class="card-title" style="font-size: 1rem;"><i class="fa-solid fa-door-open"></i> Status Ruangan Hari Ini</h3>
+            <div style="position: relative; height: 300px; width: 100%; display: flex; justify-content: center;">
+              <canvas id="roomChart"></canvas>
+            </div>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr; gap: 24px; margin-top: 24px;">
           <div class="card" style="margin-bottom: 0;">
             <h3 class="card-title" style="font-size: 1rem;"><i class="fa-solid fa-chart-line"></i> Trend Peminjaman (6 Bulan)</h3>
             <div style="position: relative; height: 300px; width: 100%;">
@@ -753,9 +818,14 @@
             <div id="calendar-grid" style="width: 100%; display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 8px;">
               <!-- Calendar days will be generated here -->
             </div>
-            <div style="margin-top: 16px; font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 16px;">
-              <div style="display: flex; align-items: center; gap: 8px;"><div style="width:16px; height:16px; background:var(--surface); border:1px solid var(--border); border-radius:4px;"></div> Tersedia (Klik untuk Pesan)</div>
-              <div style="display: flex; align-items: center; gap: 8px;"><div style="width:16px; height:16px; background:rgba(245, 158, 11, 0.15); border-left: 2px solid #F59E0B; border-radius:4px;"></div> Jadwal Ruang Terpesan</div>
+            <div style="margin-top: 16px; font-size: 0.8rem; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 12px;">
+              <div style="display: flex; align-items: center; gap: 6px;"><div style="width:14px; height:14px; background:var(--surface); border:1px solid var(--border); border-radius:3px;"></div> Tersedia</div>
+              <div style="display: flex; align-items: center; gap: 6px;"><div class="room-studio" style="width:14px; height:14px; border-radius:3px;"></div> Studio</div>
+              <div style="display: flex; align-items: center; gap: 6px;"><div class="room-studio-ulp" style="width:14px; height:14px; border-radius:3px;"></div> Studio ULP</div>
+              <div style="display: flex; align-items: center; gap: 6px;"><div class="room-zoom-pod" style="width:14px; height:14px; border-radius:3px;"></div> Zoom Pod</div>
+              <div style="display: flex; align-items: center; gap: 6px;"><div class="room-kelas" style="width:14px; height:14px; border-radius:3px;"></div> Ruang Kelas</div>
+              <div style="display: flex; align-items: center; gap: 6px;"><div class="room-rapat" style="width:14px; height:14px; border-radius:3px;"></div> Ruang Rapat</div>
+              <div style="display: flex; align-items: center; gap: 6px;"><div class="room-auditorium" style="width:14px; height:14px; border-radius:3px;"></div> Auditorium</div>
             </div>
           </div>
         </div>
@@ -932,6 +1002,54 @@
         </div>
       </div>
 
+      <!-- VIEW: BLOKIR / MAINTENANCE -->
+      <div id="view-blokir" class="view-section">
+        <div class="card">
+          <h3 class="card-title"><i class="fa-solid fa-ban"></i> Blokir Barang / Ruang untuk Maintenance</h3>
+          <p style="color: var(--text-muted); margin-bottom: 20px;">Pilih barang atau ruang yang ingin diblokir sementara untuk pemeliharaan atau servis.</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+            <div class="form-group">
+              <label>Tipe Aset</label>
+              <select id="blokir-tipe" class="form-control" style="background: var(--surface);" onchange="updateBlokirOptions()">
+                <option value="">Pilih Tipe...</option>
+                <option value="Barang">Barang (BMN)</option>
+                <option value="Ruangan">Ruangan</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Pilih Aset</label>
+              <select id="blokir-aset" class="form-control" style="background: var(--surface);">
+                <option value="">Pilih aset...</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom: 24px;">
+            <label>Alasan Pemblokiran</label>
+            <textarea id="blokir-alasan" class="form-control" placeholder="Contoh: Dalam pemeliharaan rutin, servis hardware, dll" rows="3"></textarea>
+          </div>
+          <button class="btn btn-primary" style="width: 200px; background: #EF4444;" onclick="submitBlokir()"><i class="fa-solid fa-ban"></i> Blokir Aset</button>
+        </div>
+        <div class="card">
+          <h3 class="card-title"><i class="fa-solid fa-list"></i> Daftar Aset yang Diblokir</h3>
+          <div class="table-responsive">
+            <table id="table-blokir">
+              <thead>
+                <tr>
+                  <th>Tipe</th>
+                  <th>Nama Aset</th>
+                  <th>Alasan</th>
+                  <th>Tanggal Blokir</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="5" style="text-align:center;">Tidak ada aset yang diblokir</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
 
     </div>
   </div>
@@ -1067,6 +1185,7 @@
           <label>Nama Barang / Fasilitas</label>
           <input type="text" id="keluhan-barang" class="form-control" readonly style="background: rgba(255,255,255,0.05); color: var(--text-muted);">
         </div>
+        <input type="hidden" id="keluhan-tipe-aset" value="">
         <div class="form-group" style="margin-bottom:0;">
           <label>Jenis Keluhan</label>
           <select id="keluhan-jenis" class="form-control" style="background: var(--surface);">
@@ -1210,6 +1329,7 @@
       document.getElementById('nav-pengembalian').style.display = 'none';
       document.getElementById('nav-keluhan').style.display = 'none';
       document.getElementById('nav-verifikasi').style.display = 'none';
+      document.getElementById('nav-blokir').style.display = 'none';
       document.getElementById('nav-laporan').style.display = 'none';
       document.getElementById('nav-monitoring').style.display = 'none';
 
@@ -1221,10 +1341,12 @@
       } else if (user.role === 'Pengelola BMN') {
         document.getElementById('nav-verifikasi').style.display = 'flex';
         document.getElementById('nav-verifikasi').innerHTML = '<i class="fa-solid fa-clipboard-check"></i> Verifikasi';
+        document.getElementById('nav-blokir').style.display = 'flex';
         document.getElementById('nav-laporan').style.display = 'flex';
       } else if (user.role === 'Pengelola Ruang') {
         document.getElementById('nav-verifikasi').style.display = 'flex';
         document.getElementById('nav-verifikasi').innerHTML = '<i class="fa-solid fa-clipboard-check"></i> Verifikasi';
+        document.getElementById('nav-blokir').style.display = 'flex';
         document.getElementById('nav-laporan').style.display = 'flex';
       } else if (user.role === 'Kepala Kantor') {
         document.getElementById('nav-peminjaman').style.display = 'flex';
@@ -1238,6 +1360,7 @@
         document.getElementById('nav-pengembalian').style.display = 'flex';
         document.getElementById('nav-keluhan').style.display = 'flex';
         document.getElementById('nav-verifikasi').style.display = 'flex';
+        document.getElementById('nav-blokir').style.display = 'flex';
         document.getElementById('nav-laporan').style.display = 'flex';
         document.getElementById('nav-monitoring').style.display = 'flex';
       }
@@ -1288,7 +1411,7 @@
         evt.currentTarget.classList.add('active');
       } else {
         // Highlight the matching nav item
-        const navMap = { 'dashboard': 'nav-dashboard', 'peminjaman': 'nav-peminjaman', 'penyewaan': 'nav-penyewaan', 'pengembalian': 'nav-pengembalian', 'keluhan': 'nav-keluhan', 'verifikasi': 'nav-verifikasi', 'laporan': 'nav-laporan', 'monitoring': 'nav-monitoring' };
+        const navMap = { 'dashboard': 'nav-dashboard', 'peminjaman': 'nav-peminjaman', 'penyewaan': 'nav-penyewaan', 'pengembalian': 'nav-pengembalian', 'keluhan': 'nav-keluhan', 'verifikasi': 'nav-verifikasi', 'blokir': 'nav-blokir', 'laporan': 'nav-laporan', 'monitoring': 'nav-monitoring' };
         const navEl = document.getElementById(navMap[viewId]);
         if (navEl) navEl.classList.add('active');
       }
@@ -1300,6 +1423,7 @@
         'pengembalian': 'Pengembalian Barang',
         'keluhan': 'Lapor Keluhan',
         'verifikasi': 'Verifikasi Permohonan',
+        'blokir': 'Blokir / Maintenance',
         'laporan': 'Laporan & Log',
         'monitoring': 'Monitoring Kegiatan'
       };
@@ -1308,6 +1432,7 @@
       if (viewId === 'penyewaan') renderCalendar();
       if (viewId === 'pengembalian') renderPengembalianList();
       if (viewId === 'keluhan') renderKeluhanList();
+      if (viewId === 'blokir') renderBlokirList();
       
       if(window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
     }
@@ -1382,6 +1507,7 @@
       let riwayatHtml = '', verifikasiHtml = '', laporanHtml = '';
       let dashboardRiwayatArr = [];
       let dashboardObjects = [];
+      let allObjects = []; // For laporan (all items)
 
       if (db.length === 0) {
         riwayatHtml = verifikasiHtml = laporanHtml = `<tr><td colspan="6" style="text-align:center;">Belum ada data pengajuan</td></tr>`;
@@ -1390,13 +1516,19 @@
           let isPending = row.Status === 'Menunggu Verifikasi' || row.Status === 'Diteruskan ke BMN';
           let isApproved = row.Status === 'Disetujui';
           let isSelesai = row.Status === 'Selesai';
-          if (isPending || isApproved) pendingCount++;
+          let isCancelled = row.Status === 'Dibatalkan';
+          let isBlocked = row.Status === 'Diblokir';
+          let isActive = isPending || isApproved; // Active = still pending or approved
+          if (isActive) pendingCount++;
           if (row.Status === 'Terlambat') lateCount++;
           
-          let badgeClass = isPending ? 'badge-pending' : (isApproved ? 'badge-approved' : (isSelesai ? 'badge-selesai' : 'badge-rejected'));
+          let badgeClass = isPending ? 'badge-pending' : (isApproved ? 'badge-approved' : (isSelesai ? 'badge-selesai' : (isCancelled ? 'badge-cancelled' : (isBlocked ? 'badge-blocked' : 'badge-rejected'))));
           let badgeLabel = isPending ? 'Menunggu' : (isApproved ? 'Disetujui' : (row.Status || '-'));
           let rejectInfo = '';
           if (row.Status === 'Ditolak' && row['Alasan Penolakan']) {
+            rejectInfo = `<br><span style="font-size:0.75rem; color:#F87171;">Alasan: ${row['Alasan Penolakan']}</span>`;
+          }
+          if (row.Status === 'Dibatalkan' && row['Alasan Penolakan']) {
             rejectInfo = `<br><span style="font-size:0.75rem; color:#F87171;">Alasan: ${row['Alasan Penolakan']}</span>`;
           }
           let detailStr = '';
@@ -1421,35 +1553,53 @@
             finishBtn = ` <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.75rem; border-radius: 6px; width:auto; margin-left:8px;" onclick="updateStatus('${row.tipe}', ${row._rowIndex}, 'Selesai')">✅ Selesai</button>`;
           }
 
+          // Cancel button for BMN and Admin on Barang loans with keluhan
+          let cancelBtn = '';
+          if (row.tipe === 'Barang' && row.Status === 'Disetujui' && (currentUser.role === 'Admin' || currentUser.role === 'Pengelola BMN')) {
+            cancelBtn = ` <button class="btn-delete" style="background:rgba(239,68,68,0.15);" onclick="cancelLoan('${row.tipe}', ${row._rowIndex})">❌ Batalkan</button>`;
+          }
+
           let tr = `<tr>
             <td><span style="background:rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">${row.tipe}</span></td>
             <td><strong>${row.Nama || '-'}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">NIP: ${row.NIP || '-'}</span></td>
             <td>${detailStr}</td>
             <td style="font-size:0.85rem;">${periodeStr}</td>
             <td style="font-size:0.8rem;">${row['Tanggal Pengajuan'] || "-"}</td>
-            <td><span class="badge ${badgeClass}">${badgeLabel}</span>${rejectInfo}${finishBtn}${deleteBtn}</td>
+            <td><span class="badge ${badgeClass}">${badgeLabel}</span>${rejectInfo}${finishBtn}${cancelBtn}${deleteBtn}</td>
           </tr>`;
-          dashboardObjects.push({ tipe: row.tipe, html: tr });
-          dashboardRiwayatArr.push(tr);
+          
+          // All data goes to laporan
+          allObjects.push({ tipe: row.tipe, html: tr });
+          
+          // Only active loans go to dashboard riwayat
+          if (isActive) {
+            dashboardObjects.push({ tipe: row.tipe, html: tr });
+            dashboardRiwayatArr.push(tr);
+          }
           riwayatHtml += tr;
           laporanHtml += tr;
 
           if (isPending) {
             let canVerify = false;
+            const keluhanIsRuangan = row.tipe === 'Keluhan' && (row.Deskripsi || '').includes('[TIPE_RUANGAN]');
+            const keluhanIsBMN = row.tipe === 'Keluhan' && (row.Deskripsi || '').includes('[TIPE_BMN]');
+            
             if (currentUser.role === 'Admin') canVerify = true;
             if (currentUser.role === 'Pengelola BMN') {
                if (['Barang', 'Pengembalian'].includes(row.tipe) && row.Status === 'Menunggu Verifikasi') canVerify = true;
+               if (row.tipe === 'Keluhan' && keluhanIsBMN && row.Status === 'Menunggu Verifikasi') canVerify = true;
                if (row.tipe === 'Keluhan' && row.Status === 'Diteruskan ke BMN') canVerify = true;
             }
             if (currentUser.role === 'Pengelola Ruang') {
                if (['Ruangan'].includes(row.tipe) && row.Status === 'Menunggu Verifikasi') canVerify = true;
-               if (row.tipe === 'Keluhan' && row.Status === 'Menunggu Verifikasi') canVerify = true;
+               if (row.tipe === 'Keluhan' && keluhanIsRuangan && row.Status === 'Menunggu Verifikasi') canVerify = true;
             }
             
             if (canVerify) {
               let actionsHtml = `<button class="btn btn-primary" style="padding: 4px 8px; width: auto; font-size: 0.8rem;" onclick="updateStatus('${row.tipe}', ${row._rowIndex}, 'Disetujui')">Setujui</button>`;
               
-              if (row.tipe === 'Keluhan' && row.Status === 'Menunggu Verifikasi') {
+              // Forward to BMN button for Ruangan keluhan (Pengelola Ruang or Admin)
+              if (row.tipe === 'Keluhan' && keluhanIsRuangan && row.Status === 'Menunggu Verifikasi' && (currentUser.role === 'Pengelola Ruang' || currentUser.role === 'Admin')) {
                 actionsHtml += ` <button class="btn btn-primary" style="background: var(--warning); padding: 4px 8px; width: auto; font-size: 0.8rem;" onclick="updateStatus('${row.tipe}', ${row._rowIndex}, 'Diteruskan ke BMN')">Teruskan ke BMN</button>`;
               }
               
@@ -1487,7 +1637,7 @@
       // Store arrays for paginated rendering
       window._dashboardObjects = dashboardObjects;
       window._dashboardRiwayatArr = dashboardRiwayatArr;
-      window._laporanRiwayatArr = dashboardObjects; // Store objects for filter logic
+      window._laporanRiwayatArr = allObjects; // Store all objects for laporan filter logic
       window._monitoringRiwayatArr = dashboardRiwayatArr.slice(); // same data
       window._allDbData = db; // Store full DB for calendar and lists
       
@@ -1784,21 +1934,26 @@
       const jenis = document.getElementById('keluhan-jenis').value;
       const deskripsi = document.getElementById('keluhan-deskripsi').value;
       const tanggal = document.getElementById('keluhan-tanggal').value;
+      const tipeAset = document.getElementById('keluhan-tipe-aset').value; // 'Barang' or 'Ruangan'
 
       if (!nama || !nip || !barang || !jenis || !deskripsi || !tanggal) return showAlert('alert-keluhan', 'Semua field wajib diisi!', 'error');
 
-      const payload = { type: "keluhan", data: { "NIP": nip, "Nama": nama, "Barang": barang, "Jenis": jenis, "Deskripsi": deskripsi, "Tanggal Kejadian": tanggal } };
+      // Prefix deskripsi with tipe for routing: [TIPE_RUANGAN] or [TIPE_BMN]
+      const tipeTag = tipeAset === 'Ruangan' ? '[TIPE_RUANGAN]' : '[TIPE_BMN]';
+      const payload = { type: "keluhan", data: { "NIP": nip, "Nama": nama, "Barang": barang, "Jenis": jenis, "Deskripsi": `${tipeTag} ${deskripsi}`, "Tanggal Kejadian": tanggal } };
       apiCall('submitForm', payload).then(res => {
         if(res && res.success) loadDashboardData();
       });
       
       document.getElementById('modal-keluhan-form').classList.remove('active');
-      showModal('TERKIRIM!', 'Laporan keluhan berhasil dikirim. Tim teknis akan menindaklanjuti.', 'success');
+      const routeMsg = tipeAset === 'Ruangan' ? 'Keluhan diteruskan ke Pengelola Ruang.' : 'Keluhan diteruskan ke Pengelola BMN.';
+      showModal('TERKIRIM!', `Laporan keluhan berhasil dikirim. ${routeMsg}`, 'success');
       document.getElementById('keluhan-nama').value = '';
       document.getElementById('keluhan-nip').value = '';
       document.getElementById('keluhan-barang').value = '';
       document.getElementById('keluhan-jenis').value = '';
       document.getElementById('keluhan-deskripsi').value = '';
+      document.getElementById('keluhan-tipe-aset').value = '';
       switchView('dashboard');
     }
 
@@ -1879,6 +2034,7 @@
       document.getElementById('keluhan-nama').value = row.Nama;
       document.getElementById('keluhan-nip').value = row.NIP;
       document.getElementById('keluhan-barang').value = row.tipe === 'Barang' ? row.Barang : row.Ruang;
+      document.getElementById('keluhan-tipe-aset').value = row.tipe; // 'Barang' or 'Ruangan'
       document.getElementById('keluhan-jenis').value = '';
       document.getElementById('keluhan-deskripsi').value = '';
       document.getElementById('keluhan-tanggal').value = new Date().toISOString().split('T')[0];
@@ -1948,7 +2104,8 @@
         if (bookings.length > 0) {
           cellHtml += `<div style="display:flex; flex-direction:column; gap:4px; flex:1; overflow-y:auto; max-height:80px;">`;
           bookings.forEach(b => {
-             cellHtml += `<div style="background:rgba(245, 158, 11, 0.15); border-left: 2px solid #F59E0B; padding: 4px; border-radius: 4px; font-size: 0.65rem; color: #FBBF24; line-height:1.2;">`;
+             const roomClass = getRoomClass(b.ruang);
+             cellHtml += `<div class="${roomClass}" style="padding: 4px; border-radius: 4px; font-size: 0.65rem; line-height:1.2;">`;
              cellHtml += `<strong>${b.ruang}</strong><br><span style="opacity:0.8">${b.nama}</span>`;
              cellHtml += `</div>`;
           });
@@ -2053,21 +2210,186 @@
     }
 
     let donutChartInstance = null;
+    let roomChartInstance = null;
     let lineChartInstance = null;
     
+    // Room classification helper
+    function getRoomClass(roomName) {
+      if (!roomName) return 'room-studio';
+      const rn = roomName.toLowerCase();
+      if (rn.includes('studio ulp')) return 'room-studio-ulp';
+      if (rn.includes('studio')) return 'room-studio';
+      if (rn.includes('zoom pod')) return 'room-zoom-pod';
+      if (rn.includes('kelas')) return 'room-kelas';
+      if (rn.includes('rapat')) return 'room-rapat';
+      if (rn.includes('auditorium')) return 'room-auditorium';
+      return 'room-studio';
+    }
+
+    // Cancel loan function for BMN / Admin
+    async function cancelLoan(type, rowIndex) {
+      const reason = prompt('Masukkan alasan pembatalan pinjaman:');
+      if (!reason || !reason.trim()) return;
+      const res = await apiCall('updateStatus', { type, rowIndex, status: 'Dibatalkan', reason: reason.trim() });
+      if (res && res.success) {
+        showModal('DIBATALKAN!', 'Status pinjaman telah dibatalkan.', 'info');
+        loadDashboardData();
+      } else {
+        showModal('GAGAL', 'Gagal membatalkan pinjaman. Coba lagi.', 'error');
+      }
+    }
+
+    // Blokir / Maintenance management
+    window._blokirList = JSON.parse(localStorage.getItem('simba_blokir') || '[]');
+
+    function updateBlokirOptions() {
+      const tipe = document.getElementById('blokir-tipe').value;
+      const sel = document.getElementById('blokir-aset');
+      let html = '<option value="">Pilih aset...</option>';
+      
+      if (tipe === 'Barang') {
+        const barangGroups = {
+          'Peralatan Mesin Khusus TIK': ["Laptop (3100102002)", "PC (3100102001)", "Printer (3100203003)", "Tablet PC (3100102009)"],
+          'Peralatan Elektronik Lainnya': ["LCD (3050105048)", "Televisi (3050206002)", "Kamera (3050206020)", "Camera Conference (3060102165)", "Penghancur Kertas (3050105015)", "Microphone (3060101036)", "Head Set (3060102118)", "Drone (3060102167)"],
+          'Kendaraan Angkutan Bermotor': ["Mobil Dinas Avanza (3020102003)", "Mobil Dinas Innova (3020101003)", "Micro Bus HiAce & HINO L300 (3020102002)", "Mobil Ambulance (3020105001)"],
+          'Peralatan Kantor Lainnya': ["Alat Kesehatan (Mannequin, Tensi Darah, dll) (XXXXXXX)", "Alat Peraga (XXXXXXX)", "Alat Olahraga (XXXXXXX)", "Pointer (XXXXXXX)"]
+        };
+        for (const [group, items] of Object.entries(barangGroups)) {
+          html += `<optgroup label="${group}">`;
+          items.forEach(b => { html += `<option value="${b}">${b}</option>`; });
+          html += '</optgroup>';
+        }
+      } else if (tipe === 'Ruangan') {
+        const ruangGroups = [
+          { group: 'Studio', items: ["Studio 1","Studio 2","Studio 3","Studio 4"] },
+          { group: 'Studio ULP', items: ["Studio ULP 1","Studio ULP 2","Studio ULP 3"] },
+          { group: 'Zoom Pod', items: ["Zoom Pod 1","Zoom Pod 2","Zoom Pod 3"] },
+          { group: 'Ruang Kelas', items: ["Ruang Kelas Alpine","Ruang Kelas Bangau","Ruang Kelas Cendrawasih","Ruang Kelas Dara","Ruang Kelas Elang","Ruang Kelas Flamingo","Ruang Kelas Kenari"] },
+          { group: 'Ruang Rapat', items: ["Ruang Rapat Gelatik","Ruang Rapat Merpati","Ruang Rapat Nuri"] },
+          { group: 'Auditorium', items: ["Auditorium Garuda","Auditorium Rajawali"] }
+        ];
+        ruangGroups.forEach(g => {
+          html += `<optgroup label="${g.group}">`;
+          g.items.forEach(r => { html += `<option value="${r}">${r}</option>`; });
+          html += '</optgroup>';
+        });
+      }
+      sel.innerHTML = html;
+    }
+
+    function submitBlokir() {
+      const tipe = document.getElementById('blokir-tipe').value;
+      const aset = document.getElementById('blokir-aset').value;
+      const alasan = document.getElementById('blokir-alasan').value.trim();
+      if (!tipe || !aset || !alasan) { showModal('GAGAL', 'Semua field wajib diisi!', 'error'); return; }
+      
+      // Check if already blocked
+      if (window._blokirList.find(b => b.aset === aset)) { showModal('INFO', 'Aset ini sudah diblokir.', 'info'); return; }
+      
+      window._blokirList.push({ tipe, aset, alasan, tanggal: new Date().toLocaleDateString('id-ID') });
+      localStorage.setItem('simba_blokir', JSON.stringify(window._blokirList));
+      
+      showModal('BERHASIL!', `${aset} berhasil diblokir untuk maintenance.`, 'success');
+      document.getElementById('blokir-tipe').value = '';
+      document.getElementById('blokir-aset').innerHTML = '<option value="">Pilih aset...</option>';
+      document.getElementById('blokir-alasan').value = '';
+      renderBlokirList();
+      loadDashboardData(); // Refresh to update blocked items in dropdowns
+    }
+
+    function unblokir(index) {
+      if (!confirm('Apakah Anda yakin ingin membuka blokir aset ini?')) return;
+      window._blokirList.splice(index, 1);
+      localStorage.setItem('simba_blokir', JSON.stringify(window._blokirList));
+      showModal('DIBUKA!', 'Blokir aset telah dicabut.', 'success');
+      renderBlokirList();
+      loadDashboardData();
+    }
+
+    function renderBlokirList() {
+      const tbody = document.querySelector('#table-blokir tbody');
+      if (!tbody) return;
+      if (window._blokirList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tidak ada aset yang diblokir</td></tr>';
+        return;
+      }
+      let html = '';
+      window._blokirList.forEach((b, i) => {
+        html += `<tr>
+          <td><span style="background:rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">${b.tipe}</span></td>
+          <td><strong>${b.aset}</strong></td>
+          <td style="font-size:0.85rem;">${b.alasan}</td>
+          <td style="font-size:0.85rem;">${b.tanggal}</td>
+          <td><button class="btn btn-primary" style="padding:4px 12px; font-size:0.8rem; width:auto; background:#10B981;" onclick="unblokir(${i})">🔓 Buka Blokir</button></td>
+        </tr>`;
+      });
+      tbody.innerHTML = html;
+    }
+
     function renderCharts() {
       if(!document.getElementById('donutChart')) return;
       
+      // Calculate BMN stats from real data
+      const db = window._allDbData || [];
+      const blockedBarang = window._blokirList.filter(b => b.tipe === 'Barang').length;
+      const totalBarang = parseInt(document.getElementById('stat-barang')?.innerText || '20');
+      const borrowedBarang = db.filter(r => r.tipe === 'Barang' && (r.Status === 'Disetujui' || r.Status === 'Menunggu Verifikasi')).length;
+      const availableBarang = Math.max(0, totalBarang - borrowedBarang - blockedBarang);
+
       const ctxDonut = document.getElementById('donutChart').getContext('2d');
       if(donutChartInstance) donutChartInstance.destroy();
       
       donutChartInstance = new Chart(ctxDonut, {
         type: 'doughnut',
         data: {
-          labels: ['Tersedia', 'Dipinjam', 'Tidak Tersedia'],
+          labels: ['Tersedia', 'Dipinjam', 'Diblokir'],
           datasets: [{
-            data: [8, 3, 1],
-            backgroundColor: ['#10B981', '#3B82F6', '#F59E0B'],
+            data: [availableBarang, borrowedBarang, blockedBarang],
+            backgroundColor: ['#10B981', '#3B82F6', '#9CA3AF'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: '#94A3B8' } }
+          },
+          cutout: '65%'
+        }
+      });
+
+      // Room status chart - today
+      const totalRuang = parseInt(document.getElementById('stat-ruang')?.innerText || '22');
+      const blockedRuang = window._blokirList.filter(b => b.tipe === 'Ruangan').length;
+      const today = new Date().toISOString().split('T')[0];
+      const bookedRuangToday = new Set();
+      db.forEach(r => {
+        if (r.tipe === 'Ruangan' && (r.Status === 'Disetujui' || r.Status === 'Menunggu Verifikasi')) {
+          const start = r['Waktu Mulai'];
+          const end = r['Waktu Selesai'];
+          if (start && end) {
+            const dStart = new Date(start).toISOString().split('T')[0];
+            const dEnd = new Date(end).toISOString().split('T')[0];
+            if (today >= dStart && today <= dEnd) {
+              bookedRuangToday.add(r.Ruang);
+            }
+          }
+        }
+      });
+      const bookedRuangCount = bookedRuangToday.size;
+      const availableRuang = Math.max(0, totalRuang - bookedRuangCount - blockedRuang);
+
+      const ctxRoom = document.getElementById('roomChart').getContext('2d');
+      if(roomChartInstance) roomChartInstance.destroy();
+      
+      roomChartInstance = new Chart(ctxRoom, {
+        type: 'doughnut',
+        data: {
+          labels: ['Tersedia', 'Terpakai Hari Ini', 'Diblokir'],
+          datasets: [{
+            data: [availableRuang, bookedRuangCount, blockedRuang],
+            backgroundColor: ['#10B981', '#F59E0B', '#9CA3AF'],
             borderWidth: 0
           }]
         },
