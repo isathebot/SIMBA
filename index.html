@@ -191,6 +191,43 @@
 
     .btn-secondary { background: var(--secondary); color: white; }
     .btn-danger { background: var(--danger); color: white; }
+    
+    #btn-logout {
+      background: rgba(239, 68, 68, 0.1); 
+      color: var(--danger); 
+      padding: 10px 16px; 
+      font-size: 0.9rem; 
+      border-radius: 12px;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      width: 100%;
+    }
+    #btn-logout:hover {
+      background: var(--danger);
+      color: white;
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+      transform: translateY(-2px);
+    }
+
+    /* Switch Button for Theme */
+    .theme-switch {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 50px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .theme-switch:hover {
+      border-color: var(--primary);
+      box-shadow: 0 0 15px var(--border-glow);
+    }
 
     /* App Layout */
     #app-layout {
@@ -291,9 +328,13 @@
 
     .header {
       display: flex;
-      flex-direction: column;
-      align-items: flex-start;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 32px;
+    }
+    .header-left {
+      display: flex;
+      flex-direction: column;
       gap: 8px;
     }
     .header-top {
@@ -723,14 +764,10 @@
           <i class="fa-solid fa-chart-line"></i> Monitoring
         </a>
 
-        <div style="flex-grow: 1;"></div>
-        <a class="nav-item" style="margin-top: auto; border: 1px solid var(--border);" onclick="toggleTheme()">
-          <i class="fa-solid fa-moon" id="theme-icon"></i> <span id="theme-text">Light Mode</span>
-        </a>
       </div>
       
       <div style="padding: 24px;">
-        <button class="btn" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);" onclick="logout()">
+        <button id="btn-logout" onclick="logout()">
           <i class="fa-solid fa-right-from-bracket"></i> Keluar
         </button>
       </div>
@@ -739,11 +776,16 @@
     <!-- Main Content -->
     <div class="main-content">
       <div class="header">
-        <div class="header-top">
-          <i class="fa-solid fa-bars" id="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')"></i>
-          <h1 id="page-title">Dashboard Overview</h1>
+        <div class="header-left">
+          <div class="header-top">
+            <i class="fa-solid fa-bars" id="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')"></i>
+            <h1 id="page-title">Dashboard Overview</h1>
+          </div>
+          <div id="date-display" style="color: var(--text-muted); font-weight: 500; font-size: 0.95rem;"></div>
         </div>
-        <div id="date-display" style="color: var(--text-muted); font-weight: 500; font-size: 0.95rem;"></div>
+        <button class="theme-switch" onclick="toggleTheme()">
+          <i class="fa-solid fa-moon" id="theme-icon"></i> <span id="theme-text">Light Mode</span>
+        </button>
       </div>
 
       <!-- VIEW: DASHBOARD -->
