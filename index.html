@@ -34,6 +34,32 @@
       overflow-x: hidden;
     }
 
+    /* Custom Scrollbar - Dark Theme */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--background);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+    ::-webkit-scrollbar-corner {
+      background: var(--background);
+    }
+    /* Firefox scrollbar */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) var(--background);
+    }
+
     /* Glassmorphism utilities */
     .glass {
       background: var(--surface-glass);
@@ -947,8 +973,8 @@
       <div id="view-monitoring" class="view-section">
         <div class="card">
           <h3 class="card-title"><i class="fa-solid fa-chart-line"></i> Monitoring Kegiatan</h3>
-          <p style="color:var(--text-muted); margin-bottom: 20px;">Halaman ini menampilkan statistik persetujuan dan penolakan secara real-time dari database.</p>
-          <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+          <p style="color:var(--text-muted); margin-bottom: 20px;">Halaman ini menampilkan statistik seluruh kegiatan termasuk peminjaman, pengembalian, dan keluhan secara real-time.</p>
+          <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
             <div class="stat-card" style="background: rgba(245, 158, 11, 0.1); border: 1px solid #F59E0B;">
               <div class="stat-icon" style="background: rgba(245, 158, 11, 0.2); color: #FBBF24;"><i class="fa-solid fa-hourglass-half"></i></div>
               <div class="stat-info">
@@ -970,6 +996,22 @@
                 <p>Ditolak</p>
               </div>
             </div>
+          </div>
+          <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin-top: 12px;">
+            <div class="stat-card" style="background: rgba(59, 130, 246, 0.1); border: 1px solid #3B82F6;">
+              <div class="stat-icon" style="background: rgba(59, 130, 246, 0.2); color: #60A5FA;"><i class="fa-solid fa-rotate-left"></i></div>
+              <div class="stat-info">
+                <h3 id="monitor-pengembalian" style="color:#60A5FA;">0</h3>
+                <p>Pengembalian</p>
+              </div>
+            </div>
+            <div class="stat-card" style="background: rgba(168, 85, 247, 0.1); border: 1px solid #A855F7;">
+              <div class="stat-icon" style="background: rgba(168, 85, 247, 0.2); color: #C084FC;"><i class="fa-solid fa-bug"></i></div>
+              <div class="stat-info">
+                <h3 id="monitor-keluhan" style="color:#C084FC;">0</h3>
+                <p>Keluhan</p>
+              </div>
+            </div>
             <div class="stat-card" style="background: rgba(79, 70, 229, 0.1); border: 1px solid #4F46E5;">
               <div class="stat-icon" style="background: rgba(79, 70, 229, 0.2); color: #818CF8;"><i class="fa-solid fa-database"></i></div>
               <div class="stat-info">
@@ -979,7 +1021,16 @@
             </div>
           </div>
           <div class="card" style="margin-top: 20px;">
-            <h3 class="card-title" style="font-size:1rem;"><i class="fa-solid fa-list"></i> Semua Riwayat Pengajuan</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h3 class="card-title" style="font-size:1rem; margin:0;"><i class="fa-solid fa-list"></i> Semua Riwayat Pengajuan</h3>
+              <select id="filter-monitoring" class="form-control" style="width: auto; padding: 4px 12px; background: rgba(255,255,255,0.05);" onchange="renderMonitoringPage(1)">
+                <option value="All" style="color: black;">Semua Jenis</option>
+                <option value="Barang" style="color: black;">Peminjaman Barang</option>
+                <option value="Ruangan" style="color: black;">Peminjaman Ruang</option>
+                <option value="Pengembalian" style="color: black;">Pengembalian</option>
+                <option value="Keluhan" style="color: black;">Lapor Keluhan</option>
+              </select>
+            </div>
             <div class="table-responsive">
               <table id="table-monitoring">
                 <thead>
@@ -1619,16 +1670,20 @@
 
       // Update monitoring stats
       let monitorPending = 0, monitorApproved = 0, monitorRejected = 0;
-      let monitoringHtml = '';
+      let monitorPengembalian = 0, monitorKeluhan = 0;
       db.forEach(row => {
         if (row.Status === 'Menunggu Verifikasi' || row.Status === 'Diteruskan ke BMN') monitorPending++;
         else if (row.Status === 'Disetujui') monitorApproved++;
         else if (row.Status === 'Ditolak') monitorRejected++;
+        if (row.tipe === 'Pengembalian') monitorPengembalian++;
+        if (row.tipe === 'Keluhan') monitorKeluhan++;
       });
       const monEl = (id) => document.getElementById(id);
       if (monEl('monitor-pending')) monEl('monitor-pending').innerText = monitorPending;
       if (monEl('monitor-approved')) monEl('monitor-approved').innerText = monitorApproved;
       if (monEl('monitor-rejected')) monEl('monitor-rejected').innerText = monitorRejected;
+      if (monEl('monitor-pengembalian')) monEl('monitor-pengembalian').innerText = monitorPengembalian;
+      if (monEl('monitor-keluhan')) monEl('monitor-keluhan').innerText = monitorKeluhan;
       if (monEl('monitor-total')) monEl('monitor-total').innerText = db.length;
 
       document.getElementById('stat-pending').innerText = pendingCount;
@@ -1638,7 +1693,7 @@
       window._dashboardObjects = dashboardObjects;
       window._dashboardRiwayatArr = dashboardRiwayatArr;
       window._laporanRiwayatArr = allObjects; // Store all objects for laporan filter logic
-      window._monitoringRiwayatArr = dashboardRiwayatArr.slice(); // same data
+      window._monitoringRiwayatArr = allObjects.slice(); // all objects with tipe for filtering
       window._allDbData = db; // Store full DB for calendar and lists
       
       renderDashboardRiwayat(1);
@@ -1750,22 +1805,26 @@
 
     function renderMonitoringPage(page) {
       if (!window._monitoringRiwayatArr) return;
+      const filterTipe = document.getElementById('filter-monitoring')?.value || 'All';
+      let filteredData = window._monitoringRiwayatArr;
+      if (filterTipe !== 'All') filteredData = filteredData.filter(o => o.tipe === filterTipe);
+      
       const pageSize = window._monitoringPageSize;
-      const totalItems = window._monitoringRiwayatArr.length;
+      const totalItems = filteredData.length;
       const totalPages = Math.ceil(totalItems / pageSize) || 1;
       if (page < 1) page = 1;
       if (page > totalPages) page = totalPages;
       
       const start = (page - 1) * pageSize;
       const end = start + pageSize;
-      const pageData = window._monitoringRiwayatArr.slice(start, end);
+      const pageData = filteredData.slice(start, end);
       
       const tbody = document.querySelector('#table-monitoring tbody');
       if (!tbody) return;
       if (pageData.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Belum ada data</td></tr>`;
       } else {
-        tbody.innerHTML = pageData.join('');
+        tbody.innerHTML = pageData.map(o => o.html).join('');
       }
       
       const pag = document.getElementById('monitoring-pagination');
