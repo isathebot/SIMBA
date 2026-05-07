@@ -26,7 +26,8 @@ function getSheetsClient() {
 let cachedHistory = null;
 let lastCacheTime = 0;
 let cachePromise = null;
-const CACHE_TTL = 30000; // 30 seconds
+const CACHE_TTL = 8000; // 8 seconds for near real-time updates
+let sheetsInitialized = false; // Skip redundant ensureSheet calls after first init
 
 // Ensure sheet exists AND always fix headers to match expected
 async function ensureSheet(sheets, sheetName, headers) {
@@ -107,10 +108,15 @@ module.exports = async function handler(req, res) {
 
     // ===== All actions below need Google Sheets =====
     const sheets = getSheetsClient();
-    await ensureSheet(sheets, 'Peminjaman', PEMINJAMAN_HEADERS);
-    await ensureSheet(sheets, 'Penyewaan', PENYEWAAN_HEADERS);
-    await ensureSheet(sheets, 'Pengembalian', PENGEMBALIAN_HEADERS);
-    await ensureSheet(sheets, 'Keluhan', KELUHAN_HEADERS);
+    
+    // Only ensure sheets exist on first call (saves 4 API calls per request)
+    if (!sheetsInitialized) {
+      await ensureSheet(sheets, 'Peminjaman', PEMINJAMAN_HEADERS);
+      await ensureSheet(sheets, 'Penyewaan', PENYEWAAN_HEADERS);
+      await ensureSheet(sheets, 'Pengembalian', PENGEMBALIAN_HEADERS);
+      await ensureSheet(sheets, 'Keluhan', KELUHAN_HEADERS);
+      sheetsInitialized = true;
+    }
 
     // ===================== GET HISTORY =====================
     if (action === 'getHistory') {

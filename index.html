@@ -682,6 +682,18 @@
       animation: welcomeFadeUp 1s ease-out 0.5s forwards;
       opacity: 0;
     }
+
+    /* Version Label */
+    .version-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-align: center;
+      opacity: 0.5;
+      letter-spacing: 1px;
+      font-weight: 400;
+      margin: 0;
+      user-select: none;
+    }
   </style>
 </head>
 <body>
@@ -690,7 +702,7 @@
   <div id="transition-loader">
     <img src="logo.png" alt="Logo SIMBA" class="loader-logo">
     <h2 class="welcome-text">Selamat Datang</h2>
-    <p class="welcome-sub">Sistem Informasi Manajemen Barang & Aset</p>
+    <p class="welcome-sub">Salam Sehat Untuk Kita Semua!</p>
     <div class="welcome-line"></div>
   </div>
 
@@ -714,6 +726,7 @@
         <span class="btn-text">Masuk</span>
         <div class="loader" id="login-loader"></div>
       </button>
+      <p class="version-label" style="margin-top: 24px;">v. 1.0.5</p>
     </div>
   </div>
 
@@ -770,6 +783,7 @@
         <button id="btn-logout" onclick="logout()">
           <i class="fa-solid fa-right-from-bracket"></i> Keluar
         </button>
+        <p class="version-label" style="margin-top: 12px;">v. 1.0.5</p>
       </div>
     </div>
 
@@ -1550,7 +1564,16 @@
           document.getElementById('app-layout').style.display = 'flex';
           
           if (!window._realtimeInterval) {
-            window._realtimeInterval = setInterval(loadDashboardData, 30000);
+            window._realtimeInterval = setInterval(loadDashboardData, 10000);
+          }
+          // Refresh immediately when tab regains focus
+          if (!window._visibilityListenerAdded) {
+            window._visibilityListenerAdded = true;
+            document.addEventListener('visibilitychange', () => {
+              if (!document.hidden && currentUser) {
+                loadDashboardData();
+              }
+            });
           }
         }, 500);
       }, 1500);
