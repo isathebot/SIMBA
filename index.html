@@ -3109,11 +3109,20 @@
     }
     
     // Init theme
-    const savedTheme = localStorage.getItem('simba_theme');
-    if (savedTheme) {
-      document.documentElement.setAttribute('data-theme', savedTheme);
-      updateThemeUI(savedTheme);
+    let savedTheme = localStorage.getItem('simba_theme');
+    if (!savedTheme || savedTheme === 'light') {
+      // User requested dark mode to be the main theme.
+      // Force default to dark if not set (or if we want to reset them to dark for the event).
+      // We'll let them keep light if they explicitly clicked it before?
+      // Actually, if we just want dark mode by default, checking !savedTheme is enough.
+      // However, if we want to ensure dark mode for the event, we can default it.
+      if (!savedTheme) {
+        savedTheme = 'dark';
+        localStorage.setItem('simba_theme', 'dark');
+      }
     }
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateThemeUI(savedTheme);
   </script>
 </body>
 </html>

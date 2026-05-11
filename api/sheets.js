@@ -28,7 +28,7 @@ function getSheetsClient() {
 let cachedHistory = null;
 let lastCacheTime = 0;
 let cachePromise = null;
-const CACHE_TTL = 8000; // 8 seconds for near real-time updates
+const CACHE_TTL = 30000; // Increased to 30s to prevent rate limits during high concurrent access
 let sheetsInitialized = false; // Skip redundant ensureSheet calls after first init
 
 // Ensure sheet exists AND always fix headers to match expected
@@ -114,12 +114,14 @@ module.exports = async function handler(req, res) {
     
     // Only ensure sheets exist on first call (saves 4 API calls per request)
     if (!sheetsInitialized) {
-      await ensureSheet(sheets, 'Peminjaman', PEMINJAMAN_HEADERS);
-      await ensureSheet(sheets, 'Penyewaan', PENYEWAAN_HEADERS);
-      await ensureSheet(sheets, 'Pengembalian', PENGEMBALIAN_HEADERS);
-      await ensureSheet(sheets, 'Keluhan', KELUHAN_HEADERS);
-      await ensureSheet(sheets, 'PengajuanBarang', PENGAJUAN_HEADERS);
-      await ensureSheet(sheets, 'Blokir', BLOKIR_HEADERS);
+      // DISABLED for high concurrency (Sosialisasi event): 
+      // The sheets and headers are already generated. Running this uses too much Google Sheets API quota.
+      // await ensureSheet(sheets, 'Peminjaman', PEMINJAMAN_HEADERS);
+      // await ensureSheet(sheets, 'Penyewaan', PENYEWAAN_HEADERS);
+      // await ensureSheet(sheets, 'Pengembalian', PENGEMBALIAN_HEADERS);
+      // await ensureSheet(sheets, 'Keluhan', KELUHAN_HEADERS);
+      // await ensureSheet(sheets, 'PengajuanBarang', PENGAJUAN_HEADERS);
+      // await ensureSheet(sheets, 'Blokir', BLOKIR_HEADERS);
       sheetsInitialized = true;
     }
 
