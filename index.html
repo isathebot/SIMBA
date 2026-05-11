@@ -326,11 +326,18 @@
     #btn-logout {
       background: rgba(239, 68, 68, 0.1); 
       color: var(--danger); 
-      padding: 10px 16px; 
-      font-size: 0.9rem; 
-      border-radius: 12px;
+      padding: 8px 14px; 
+      font-size: 0.85rem; 
+      border-radius: 10px;
       transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+    #btn-logout i {
+      font-size: 0.85rem;
     }
     #btn-logout:hover {
       background: var(--danger);
@@ -590,7 +597,7 @@
       gap: 32px;
       position: absolute;
       white-space: nowrap;
-      animation: marquee 20s linear infinite;
+      animation: marquee 50s linear infinite;
     }
     .marquee-content:hover { animation-play-state: paused; }
     @keyframes marquee {
@@ -1742,6 +1749,14 @@
         document.getElementById('nav-blokir').style.display = 'flex';
         document.getElementById('nav-laporan').style.display = 'flex';
         document.getElementById('nav-monitoring').style.display = 'flex';
+      }
+
+      // Restrict Blokir options based on role
+      const blokirTipe = document.getElementById('blokir-tipe');
+      if (user.role === 'Pengelola Ruang') {
+        blokirTipe.innerHTML = '<option value="">Pilih Tipe...</option><option value="Ruangan">Ruangan</option>';
+      } else {
+        blokirTipe.innerHTML = '<option value="">Pilih Tipe...</option><option value="Barang">Barang (BMN)</option><option value="Ruangan">Ruangan</option>';
       }
 
       // Reset to dashboard view
