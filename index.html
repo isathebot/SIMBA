@@ -565,7 +565,7 @@
     /* Blocked item cross in barang dropdown */
     .blocked-option { color: #9CA3AF !important; text-decoration: line-through; }
 
-    /* Deadline alert banner */
+    /* Deadline alert banner - Marquee */
     .deadline-banner {
       background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(239, 68, 68, 0.08));
       border: 1px solid rgba(245, 158, 11, 0.35);
@@ -574,14 +574,38 @@
       margin-bottom: 20px;
       display: none;
       animation: fadeIn 0.4s ease-out;
+      overflow: hidden; /* For marquee */
     }
-    .deadline-banner.active { display: block; }
-    .deadline-banner h4 { color: #FBBF24; font-size: 0.95rem; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-    .deadline-banner ul { list-style: none; padding: 0; margin: 0; }
-    .deadline-banner li { color: var(--text-main); font-size: 0.85rem; padding: 4px 0; display: flex; align-items: center; gap: 8px; }
+    .deadline-banner.active { display: flex; align-items: center; gap: 12px; }
+    .deadline-banner h4 { color: #FBBF24; font-size: 0.95rem; margin: 0; display: flex; align-items: center; gap: 8px; white-space: nowrap; flex-shrink: 0; }
+    
+    .marquee-container {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+      height: 24px;
+    }
+    .marquee-content {
+      display: flex;
+      gap: 32px;
+      position: absolute;
+      white-space: nowrap;
+      animation: marquee 20s linear infinite;
+    }
+    .marquee-content:hover { animation-play-state: paused; }
+    @keyframes marquee {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+    
+    .deadline-banner li { color: var(--text-main); font-size: 0.85rem; padding: 0; display: inline-flex; align-items: center; gap: 8px; }
     .deadline-banner li .dl-name { font-weight: 600; }
     .deadline-banner li .dl-item { color: var(--text-muted); }
     .deadline-banner li .dl-date { color: #F59E0B; font-weight: 600; font-size: 0.8rem; }
+    
+    tr.row-overdue { background: rgba(239, 68, 68, 0.08) !important; }
+    tr.row-overdue td:first-child { border-left: 3px solid #EF4444; }
+    
     [data-theme="light"] .deadline-banner { background: linear-gradient(135deg, rgba(245, 158, 11, 0.06), rgba(239, 68, 68, 0.04)); }
     [data-theme="light"] .deadline-banner h4 { color: #D97706; }
     [data-theme="light"] .deadline-banner li .dl-date { color: #B45309; }
@@ -967,8 +991,10 @@
       <!-- VIEW: DASHBOARD -->
       <div id="view-dashboard" class="view-section active">
         <div class="deadline-banner" id="deadline-banner">
-          <h4><i class="fa-solid fa-bell"></i> Peringatan Masa Peminjaman Hampir Berakhir</h4>
-          <ul id="deadline-list"></ul>
+          <h4><i class="fa-solid fa-bell"></i> Peringatan Masa Peminjaman:</h4>
+          <div class="marquee-container">
+            <div class="marquee-content" id="deadline-list"></div>
+          </div>
         </div>
 
         <div style="color: var(--text-muted); margin-bottom: 20px;">Berikut ringkasan aset BMN hari ini — <span id="dash-date"></span></div>
@@ -1041,6 +1067,13 @@
             </table>
           </div>
           <div id="dashboard-pagination" class="pagination-wrapper"></div>
+          
+          <div id="deadline-bottom-warning" style="margin-top: 16px; display: none;">
+            <div style="padding: 16px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px;">
+              <h4 style="color: #EF4444; margin: 0 0 12px 0; font-size: 0.95rem;"><i class="fa-solid fa-triangle-exclamation"></i> Peringatan: Masa Peminjaman Habis / Segera Berakhir</h4>
+              <ul id="deadline-bottom-list" style="margin: 0; padding-left: 20px; font-size: 0.85rem; color: var(--text-main); line-height: 1.6;"></ul>
+            </div>
+          </div>
         </div>
 
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px;">
@@ -1455,11 +1488,11 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
           <div class="form-group" style="margin-bottom:0;">
             <label>Waktu Mulai</label>
-            <input type="datetime-local" id="waktu-mulai" class="form-control" style="color-scheme: dark;">
+            <input type="datetime-local" id="waktu-mulai" class="form-control" style="color-scheme: dark;" onchange="checkRoomAvailability()">
           </div>
           <div class="form-group" style="margin-bottom:0;">
             <label>Waktu Selesai</label>
-            <input type="datetime-local" id="waktu-selesai" class="form-control" style="color-scheme: dark;">
+            <input type="datetime-local" id="waktu-selesai" class="form-control" style="color-scheme: dark;" onchange="checkRoomAvailability()">
           </div>
         </div>
       </div>
@@ -1924,7 +1957,26 @@
             cancelBtn = ` <button class="btn-delete" style="background:rgba(239,68,68,0.15);" onclick="cancelLoan('${row.tipe}', ${row._rowIndex})">❌ Batalkan</button>`;
           }
 
-          let tr = `<tr>
+          // Compute deadline class for Barang (Disetujui)
+          let trClass = '';
+          let daysLeft = null;
+          if (row.tipe === 'Barang' && row.Status === 'Disetujui' && row['Tanggal Kembali']) {
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const returnDate = new Date(row['Tanggal Kembali']);
+            returnDate.setHours(0,0,0,0);
+            daysLeft = Math.ceil((returnDate - today) / (1000 * 60 * 60 * 24));
+            
+            if (daysLeft < 0) {
+              trClass = 'row-overdue'; // Red
+            } else if (daysLeft === 0 || daysLeft === 1) {
+              trClass = 'row-overdue'; // Red for 0 or 1 day left
+            } else if (daysLeft === 2) {
+              trClass = 'row-near-deadline'; // Yellow for 2 days left
+            }
+          }
+
+          let tr = `<tr class="${trClass}" data-daysleft="${daysLeft !== null ? daysLeft : 999}">
             <td><span style="background:var(--border); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; color:var(--text-main); font-weight:600;">${row.tipe}</span></td>
             <td><strong>${row.Nama || '-'}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">NIP: ${row.NIP || '-'}</span></td>
             <td>${detailStr}</td>
@@ -1934,10 +1986,10 @@
           </tr>`;
           
           // All data goes to laporan
-          allObjects.push({ tipe: row.tipe, html: tr });
+          allObjects.push({ tipe: row.tipe, html: tr, daysLeft: daysLeft !== null ? daysLeft : 999 });
           
           // Show all data in dashboard, not just active
-          dashboardObjects.push({ tipe: row.tipe, html: tr });
+          dashboardObjects.push({ tipe: row.tipe, html: tr, daysLeft: daysLeft !== null ? daysLeft : 999 });
           dashboardRiwayatArr.push(tr);
           
           riwayatHtml += tr;
@@ -2005,8 +2057,6 @@
       // ===== NEAR-DEADLINE DETECTION =====
       const today = new Date();
       today.setHours(0,0,0,0);
-      const twoDaysLater = new Date(today);
-      twoDaysLater.setDate(twoDaysLater.getDate() + 2);
       
       let nearDeadlineItems = [];
       db.forEach(row => {
@@ -2014,38 +2064,73 @@
           const returnDate = new Date(row['Tanggal Kembali']);
           returnDate.setHours(0,0,0,0);
           const diffDays = Math.ceil((returnDate - today) / (1000 * 60 * 60 * 24));
-          if (diffDays <= 2 && diffDays >= 0) {
+          if (diffDays <= 2) {
             nearDeadlineItems.push({ ...row, daysLeft: diffDays });
           }
         }
       });
       
-      // Show deadline banner
+      // Sort items by days left ascending (most overdue first)
+      nearDeadlineItems.sort((a, b) => a.daysLeft - b.daysLeft);
+      
+      // Show deadline banner (Marquee)
       const deadlineBanner = document.getElementById('deadline-banner');
       const deadlineList = document.getElementById('deadline-list');
+      const bottomWarning = document.getElementById('deadline-bottom-warning');
+      const bottomList = document.getElementById('deadline-bottom-list');
+      
       if (nearDeadlineItems.length > 0) {
         deadlineBanner.classList.add('active');
-        deadlineList.innerHTML = nearDeadlineItems.map(item => {
-          const urgency = item.daysLeft === 0 ? '🔴 HARI INI!' : (item.daysLeft === 1 ? '🟠 Besok' : '🟡 2 hari lagi');
-          return `<li>
-            <i class="fa-solid fa-clock deadline-alert-icon"></i>
-            <span class="dl-name">${item.Nama}</span>
-            <span class="dl-item">— ${item.Barang}</span>
-            <span class="dl-date">${urgency} (${item['Tanggal Kembali']})</span>
-          </li>`;
-        }).join('');
         
-        // Sort near-deadline items to TOP of dashboard
-        const nearDeadlineNIPs = new Set(nearDeadlineItems.map(i => i.NIP + i.Barang));
-        dashboardObjects.sort((a, b) => {
-          // Extract from html - check if this is a near-deadline row
-          const aKey = (a.nama || '') + (a.barang || '');
-          const bKey = (b.nama || '') + (b.barang || '');
-          return 0; // Keep existing sort, we'll prepend near-deadline items
+        let marqueeHtml = '';
+        let bottomHtml = '';
+        
+        nearDeadlineItems.forEach(item => {
+          let urgency = '';
+          let color = '';
+          let msg = '';
+          if (item.daysLeft < 0) {
+            urgency = `🔴 TERLAMBAT ${Math.abs(item.daysLeft)} HARI`;
+            color = '#EF4444';
+            msg = `<strong>${item.Nama}</strong> — ${item.Barang}: Masa peminjaman sudah habis! Tolong segera urus pengembalian barang.`;
+          } else if (item.daysLeft === 0) {
+            urgency = '🔴 HARI INI!';
+            color = '#EF4444';
+            msg = `<strong>${item.Nama}</strong> — ${item.Barang}: Masa peminjaman berakhir hari ini.`;
+          } else if (item.daysLeft === 1) {
+            urgency = '🔴 Besok';
+            color = '#EF4444';
+            msg = `<strong>${item.Nama}</strong> — ${item.Barang}: Masa peminjaman berakhir besok.`;
+          } else {
+            urgency = '🟡 2 hari lagi';
+            color = '#F59E0B';
+            msg = `<strong>${item.Nama}</strong> — ${item.Barang}: Masa peminjaman berakhir 2 hari lagi.`;
+          }
+          
+          marqueeHtml += `<span style="display:inline-flex; align-items:center; gap:8px;">
+            <i class="fa-solid fa-circle-exclamation" style="color:${color}"></i>
+            <span style="font-weight:600; color:var(--text-main);">${item.Nama}</span>
+            <span style="color:var(--text-muted);">— ${item.Barang}</span>
+            <span style="font-weight:bold; color:${color};">${urgency}</span>
+          </span>`;
+          
+          bottomHtml += `<li><span style="color:${color}; font-weight:bold;">[${urgency}]</span> ${msg}</li>`;
         });
+        
+        // Duplicate marquee content to make it seamless
+        deadlineList.innerHTML = marqueeHtml + '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + marqueeHtml;
+        
+        bottomWarning.style.display = 'block';
+        bottomList.innerHTML = bottomHtml;
+        
+        // Sort dashboardObjects to put near-deadline items at the top
+        dashboardObjects.sort((a, b) => a.daysLeft - b.daysLeft);
+        
       } else {
         deadlineBanner.classList.remove('active');
         deadlineList.innerHTML = '';
+        bottomWarning.style.display = 'none';
+        bottomList.innerHTML = '';
       }
       
       // ===== BLOCKED ITEMS IN DROPDOWNS =====
@@ -2604,6 +2689,66 @@
       }
     }
 
+    function checkRoomAvailability() {
+      const tglM = document.getElementById('waktu-mulai').value;
+      const tglS = document.getElementById('waktu-selesai').value;
+      if (!tglM || !tglS || !window._allDbData) return;
+      
+      const selRuang = document.getElementById('select-ruang');
+      // Reset all options first (except blocked for maintenance)
+      const blockedRuangNames = (window._blokirList || []).filter(b => b.Tipe === 'Ruangan').map(b => b.Aset);
+      
+      Array.from(selRuang.options).forEach(opt => {
+        if (!opt.value) return; // Skip placeholder
+        
+        // Restore original name if it was modified
+        if (opt.textContent.startsWith('❌') && opt.textContent.includes('(Telah di-book)')) {
+          opt.textContent = opt.value;
+          opt.disabled = false;
+          opt.style.color = '';
+          opt.style.textDecoration = '';
+        }
+        
+        // Maintain maintenance blocks
+        if (blockedRuangNames.includes(opt.value)) {
+          opt.textContent = '❌ ' + opt.value + ' (Diblokir/Maintenance)';
+          opt.disabled = true;
+          opt.style.color = '#9CA3AF';
+          opt.style.textDecoration = 'line-through';
+        }
+      });
+
+      const startReq = new Date(tglM).getTime();
+      const endReq = new Date(tglS).getTime();
+
+      // Check against DB
+      const bookedRooms = new Set();
+      window._allDbData.forEach(row => {
+        if (row.tipe === 'Ruangan' && (row.Status === 'Disetujui' || row.Status === 'Menunggu Verifikasi')) {
+          const mStart = new Date(row['Waktu Mulai']).getTime();
+          const mEnd = new Date(row['Waktu Selesai']).getTime();
+          if (mStart && mEnd) {
+            // Check for overlap: (StartA <= EndB) and (EndA >= StartB)
+            if (mStart < endReq && mEnd > startReq) {
+              bookedRooms.add(row.Ruang);
+            }
+          }
+        }
+      });
+
+      // Disable booked rooms
+      Array.from(selRuang.options).forEach(opt => {
+        if (bookedRooms.has(opt.value) && !opt.disabled) {
+          opt.textContent = '❌ ' + opt.value + ' (Telah di-book)';
+          opt.disabled = true;
+          opt.style.color = '#EF4444'; // Red for booked
+          opt.style.textDecoration = 'line-through';
+          // Deselect if currently selected
+          if (selRuang.value === opt.value) selRuang.value = '';
+        }
+      });
+    }
+
     function openPenyewaanModal(dateStr) {
       if(!currentUser) { alert('Silakan login terlebih dahulu'); return; }
       
@@ -2613,6 +2758,8 @@
       document.getElementById('waktu-mulai').value = `${dateStr}T08:00`;
       document.getElementById('waktu-selesai').value = `${dateStr}T16:00`;
       document.getElementById('acara-ruang').value = '';
+      
+      checkRoomAvailability();
       
       document.getElementById('modal-penyewaan-form').classList.add('active');
     }
