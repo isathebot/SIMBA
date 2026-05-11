@@ -29,14 +29,17 @@
 
     /* Light Theme Variables */
     [data-theme="light"] {
-      --background: #E8ECF1;
-      --surface: #F0F2F5;
-      --surface-glass: rgba(240, 242, 245, 0.97);
-      --text-main: #1E293B;
-      --text-muted: #556677;
-      --border: rgba(0, 0, 0, 0.18);
-      --border-glow: rgba(79, 70, 229, 0.25);
-      --primary-glow: rgba(99, 102, 241, 0.2);
+      --primary: #00A69C; /* Kemenkes Turquoise */
+      --primary-hover: #008B82;
+      --primary-glow: rgba(0, 166, 156, 0.25);
+      --secondary: #8BC34A; /* Kemenkes Light Green */
+      --background: #F4F7F6;
+      --surface: #FFFFFF;
+      --surface-glass: rgba(255, 255, 255, 0.97);
+      --text-main: #1F2937;
+      --text-muted: #4B5563;
+      --border: rgba(0, 0, 0, 0.12);
+      --border-glow: rgba(0, 166, 156, 0.3);
     }
     
     /* Theme overrides — Light Mode */
@@ -48,7 +51,7 @@
     [data-theme="light"] .form-control:focus {
       background: #FFFFFF;
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+      box-shadow: 0 0 0 3px rgba(0, 166, 156, 0.15);
     }
 
     /* Cards, stat-cards, login-box, modals — clear borders */
@@ -62,7 +65,7 @@
     }
     [data-theme="light"] .stat-card:hover,
     [data-theme="light"] .card:hover {
-      border-color: rgba(99, 102, 241, 0.35);
+      border-color: rgba(0, 166, 156, 0.35);
       box-shadow: 0 4px 16px rgba(0,0,0,0.08);
     }
 
@@ -82,7 +85,7 @@
       color: var(--text-main);
     }
     [data-theme="light"] .nav-item.active {
-      background: rgba(99, 102, 241, 0.08);
+      background: rgba(0, 166, 156, 0.08);
       border-left: 3px solid var(--primary);
     }
 
@@ -170,10 +173,11 @@
 
     /* Primary button glow softer in light mode */
     [data-theme="light"] .btn-primary {
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      box-shadow: 0 4px 12px rgba(0, 166, 156, 0.2);
     }
     [data-theme="light"] .btn-primary:hover {
-      box-shadow: 0 6px 18px rgba(99, 102, 241, 0.3);
+      box-shadow: 0 6px 18px rgba(0, 166, 156, 0.3);
     }
 
     /* Room classification - readable in light mode */
@@ -597,7 +601,7 @@
       gap: 32px;
       position: absolute;
       white-space: nowrap;
-      animation: marquee 50s linear infinite;
+      animation: marquee 120s linear infinite;
     }
     .marquee-content:hover { animation-play-state: paused; }
     @keyframes marquee {
