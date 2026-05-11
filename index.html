@@ -567,8 +567,8 @@
 
     /* Deadline alert banner - Marquee */
     .deadline-banner {
-      background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(239, 68, 68, 0.08));
-      border: 1px solid rgba(245, 158, 11, 0.35);
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15));
+      border: 1px solid rgba(139, 92, 246, 0.35);
       border-radius: 16px;
       padding: 16px 20px;
       margin-bottom: 20px;
@@ -990,8 +990,8 @@
 
       <!-- VIEW: DASHBOARD -->
       <div id="view-dashboard" class="view-section active">
-        <div class="deadline-banner" id="deadline-banner">
-          <h4><i class="fa-solid fa-bell"></i> Peringatan Masa Peminjaman:</h4>
+        <div class="deadline-banner active" id="deadline-banner">
+          <h4 style="color: #A78BFA;"><i class="fa-solid fa-bullhorn"></i> Informasi:</h4>
           <div class="marquee-container">
             <div class="marquee-content" id="deadline-list"></div>
           </div>
@@ -1957,26 +1957,7 @@
             cancelBtn = ` <button class="btn-delete" style="background:rgba(239,68,68,0.15);" onclick="cancelLoan('${row.tipe}', ${row._rowIndex})">❌ Batalkan</button>`;
           }
 
-          // Compute deadline class for Barang (Disetujui)
-          let trClass = '';
-          let daysLeft = null;
-          if (row.tipe === 'Barang' && row.Status === 'Disetujui' && row['Tanggal Kembali']) {
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const returnDate = new Date(row['Tanggal Kembali']);
-            returnDate.setHours(0,0,0,0);
-            daysLeft = Math.ceil((returnDate - today) / (1000 * 60 * 60 * 24));
-            
-            if (daysLeft < 0) {
-              trClass = 'row-overdue'; // Red
-            } else if (daysLeft === 0 || daysLeft === 1) {
-              trClass = 'row-overdue'; // Red for 0 or 1 day left
-            } else if (daysLeft === 2) {
-              trClass = 'row-near-deadline'; // Yellow for 2 days left
-            }
-          }
-
-          let tr = `<tr class="${trClass}" data-daysleft="${daysLeft !== null ? daysLeft : 999}">
+          let tr = `<tr>
             <td><span style="background:var(--border); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; color:var(--text-main); font-weight:600;">${row.tipe}</span></td>
             <td><strong>${row.Nama || '-'}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">NIP: ${row.NIP || '-'}</span></td>
             <td>${detailStr}</td>
@@ -1986,10 +1967,10 @@
           </tr>`;
           
           // All data goes to laporan
-          allObjects.push({ tipe: row.tipe, html: tr, daysLeft: daysLeft !== null ? daysLeft : 999 });
+          allObjects.push({ tipe: row.tipe, html: tr });
           
           // Show all data in dashboard, not just active
-          dashboardObjects.push({ tipe: row.tipe, html: tr, daysLeft: daysLeft !== null ? daysLeft : 999 });
+          dashboardObjects.push({ tipe: row.tipe, html: tr });
           dashboardRiwayatArr.push(tr);
           
           riwayatHtml += tr;
@@ -2074,17 +2055,23 @@
       nearDeadlineItems.sort((a, b) => a.daysLeft - b.daysLeft);
       
       // Show deadline banner (Marquee)
-      const deadlineBanner = document.getElementById('deadline-banner');
       const deadlineList = document.getElementById('deadline-list');
       const bottomWarning = document.getElementById('deadline-bottom-warning');
       const bottomList = document.getElementById('deadline-bottom-list');
       
+      let staticMarqueeHtml = `<span style="display:inline-flex; align-items:center; gap:8px;">
+        <i class="fa-solid fa-sun" style="color:#FBBF24;"></i>
+        <span style="font-weight:600; color:var(--text-main);">Semoga hari ini menjadi hari yang baik, salam sehat untuk kita semua!</span>
+      </span>
+      <span style="display:inline-flex; align-items:center; gap:8px; margin-left: 16px;">
+        <i class="fa-solid fa-circle-info" style="color:#60A5FA;"></i>
+        <span style="color:var(--text-main);">Tolong perhatikan langkah-langkah sebelum mengajukan permintaan, lengkapi berkas formulir secara teliti.</span>
+      </span>`;
+      
+      let marqueeHtml = staticMarqueeHtml;
+      let bottomHtml = '';
+      
       if (nearDeadlineItems.length > 0) {
-        deadlineBanner.classList.add('active');
-        
-        let marqueeHtml = '';
-        let bottomHtml = '';
-        
         nearDeadlineItems.forEach(item => {
           let urgency = '';
           let color = '';
@@ -2107,7 +2094,7 @@
             msg = `<strong>${item.Nama}</strong> — ${item.Barang}: Masa peminjaman berakhir 2 hari lagi.`;
           }
           
-          marqueeHtml += `<span style="display:inline-flex; align-items:center; gap:8px;">
+          marqueeHtml += `<span style="display:inline-flex; align-items:center; gap:8px; margin-left: 16px;">
             <i class="fa-solid fa-circle-exclamation" style="color:${color}"></i>
             <span style="font-weight:600; color:var(--text-main);">${item.Nama}</span>
             <span style="color:var(--text-muted);">— ${item.Barang}</span>
@@ -2117,21 +2104,15 @@
           bottomHtml += `<li><span style="color:${color}; font-weight:bold;">[${urgency}]</span> ${msg}</li>`;
         });
         
-        // Duplicate marquee content to make it seamless
-        deadlineList.innerHTML = marqueeHtml + '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + marqueeHtml;
-        
         bottomWarning.style.display = 'block';
         bottomList.innerHTML = bottomHtml;
-        
-        // Sort dashboardObjects to put near-deadline items at the top
-        dashboardObjects.sort((a, b) => a.daysLeft - b.daysLeft);
-        
       } else {
-        deadlineBanner.classList.remove('active');
-        deadlineList.innerHTML = '';
         bottomWarning.style.display = 'none';
         bottomList.innerHTML = '';
       }
+      
+      // Duplicate marquee content to make it seamless
+      deadlineList.innerHTML = marqueeHtml + '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + marqueeHtml;
       
       // ===== BLOCKED ITEMS IN DROPDOWNS =====
       const blockedBarangNames = window._blokirList.filter(b => b.Tipe === 'Barang').map(b => b.Aset);
