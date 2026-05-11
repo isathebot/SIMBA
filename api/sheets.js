@@ -6,6 +6,8 @@ const PEMINJAMAN_HEADERS = ["NIP", "Nama", "Barang", "Tujuan", "Tanggal Pinjam",
 const PENYEWAAN_HEADERS = ["NIP", "Nama", "Ruang", "Acara", "Waktu Mulai", "Waktu Selesai", "Status", "Tanggal Pengajuan", "Alasan Penolakan"];
 const PENGEMBALIAN_HEADERS = ["NIP", "Nama", "Barang", "Kondisi", "Tanggal Pengembalian", "Catatan", "Status", "Tanggal Pengajuan", "Alasan Penolakan"];
 const KELUHAN_HEADERS = ["NIP", "Nama", "Barang", "Jenis", "Deskripsi", "Tanggal Kejadian", "Status", "Tanggal Pengajuan", "Alasan Penolakan"];
+const PENGAJUAN_HEADERS = ["NIP", "Nama", "Barang", "Tujuan", "Tanggal Pinjam", "Tanggal Kembali", "Status", "Tanggal Pengajuan", "Alasan Penolakan"];
+const BLOKIR_HEADERS = ["Tipe", "Aset", "Alasan", "Tanggal Blokir", "Diblokir Oleh"];
 
 function getAuth() {
   const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
@@ -76,6 +78,7 @@ function getSheetConfig(type) {
     case 'penyewaan': return { sheetName: 'Penyewaan', headers: PENYEWAAN_HEADERS };
     case 'pengembalian': return { sheetName: 'Pengembalian', headers: PENGEMBALIAN_HEADERS };
     case 'keluhan': return { sheetName: 'Keluhan', headers: KELUHAN_HEADERS };
+    case 'pengajuan': return { sheetName: 'PengajuanBarang', headers: PENGAJUAN_HEADERS };
     default: return null;
   }
 }
@@ -115,6 +118,8 @@ module.exports = async function handler(req, res) {
       await ensureSheet(sheets, 'Penyewaan', PENYEWAAN_HEADERS);
       await ensureSheet(sheets, 'Pengembalian', PENGEMBALIAN_HEADERS);
       await ensureSheet(sheets, 'Keluhan', KELUHAN_HEADERS);
+      await ensureSheet(sheets, 'PengajuanBarang', PENGAJUAN_HEADERS);
+      await ensureSheet(sheets, 'Blokir', BLOKIR_HEADERS);
       sheetsInitialized = true;
     }
 
@@ -130,21 +135,24 @@ module.exports = async function handler(req, res) {
           const rData = await readSheet(sheets, 'Penyewaan');
           const pengData = await readSheet(sheets, 'Pengembalian');
           const kData = await readSheet(sheets, 'Keluhan');
+          const ajuData = await readSheet(sheets, 'PengajuanBarang');
+          const blokirData = await readSheet(sheets, 'Blokir');
           const history = [
             ...pData.map(d => ({ ...d, tipe: 'Barang' })),
             ...rData.map(d => ({ ...d, tipe: 'Ruangan' })),
             ...pengData.map(d => ({ ...d, tipe: 'Pengembalian' })),
-            ...kData.map(d => ({ ...d, tipe: 'Keluhan' }))
+            ...kData.map(d => ({ ...d, tipe: 'Keluhan' })),
+            ...ajuData.map(d => ({ ...d, tipe: 'Pengajuan' }))
           ];
-          cachedHistory = history;
+          cachedHistory = { history, blokir: blokirData };
           lastCacheTime = Date.now();
           cachePromise = null;
-          return history;
+          return cachedHistory;
         })();
       }
       
-      const history = await cachePromise;
-      return res.json({ success: true, data: history });
+      const result = await cachePromise;
+      return res.json({ success: true, data: result.history, blokir: result.blokir });
     }
 
     // ===================== SUBMIT FORM =====================
@@ -183,6 +191,7 @@ module.exports = async function handler(req, res) {
       else if (type === 'Ruangan') { sheetName = 'Penyewaan'; headers = PENYEWAAN_HEADERS; }
       else if (type === 'Pengembalian') { sheetName = 'Pengembalian'; headers = PENGEMBALIAN_HEADERS; }
       else if (type === 'Keluhan') { sheetName = 'Keluhan'; headers = KELUHAN_HEADERS; }
+      else if (type === 'Pengajuan') { sheetName = 'PengajuanBarang'; headers = PENGAJUAN_HEADERS; }
       else { return res.json({ success: false, message: 'Tipe tidak valid.' }); }
 
       const colIndex = headers.indexOf('Status');
@@ -226,6 +235,7 @@ module.exports = async function handler(req, res) {
       else if (type === 'Ruangan') sheetName = 'Penyewaan';
       else if (type === 'Pengembalian') sheetName = 'Pengembalian';
       else if (type === 'Keluhan') sheetName = 'Keluhan';
+      else if (type === 'Pengajuan') sheetName = 'PengajuanBarang';
       else return res.json({ success: false, message: 'Tipe tidak valid.' });
 
       const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
@@ -253,6 +263,50 @@ module.exports = async function handler(req, res) {
       lastCacheTime = 0;
       
       return res.json({ success: true, message: 'Data berhasil dihapus.' });
+    }
+
+    // ===================== ADD BLOKIR =====================
+    if (action === 'addBlokir') {
+      const { tipe, aset, alasan, user } = payload;
+      if (!tipe || !aset || !alasan) return res.json({ success: false, message: 'Data blokir tidak lengkap.' });
+      
+      const rowData = [tipe, aset, alasan, new Date().toLocaleDateString('id-ID'), user || '-'];
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'Blokir!A:A',
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: [rowData] }
+      });
+      cachedHistory = null;
+      lastCacheTime = 0;
+      return res.json({ success: true, message: 'Aset berhasil diblokir.' });
+    }
+
+    // ===================== REMOVE BLOKIR =====================
+    if (action === 'removeBlokir') {
+      const { rowIndex } = payload;
+      const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+      const sheetObj = spreadsheet.data.sheets.find(s => s.properties.title === 'Blokir');
+      if (!sheetObj) return res.json({ success: false, message: 'Tab Blokir tidak ditemukan.' });
+
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requestBody: {
+          requests: [{
+            deleteDimension: {
+              range: {
+                sheetId: sheetObj.properties.sheetId,
+                dimension: 'ROWS',
+                startIndex: rowIndex - 1,
+                endIndex: rowIndex
+              }
+            }
+          }]
+        }
+      });
+      cachedHistory = null;
+      lastCacheTime = 0;
+      return res.json({ success: true, message: 'Blokir berhasil dicabut.' });
     }
 
     return res.status(400).json({ success: false, message: 'Action tidak dikenal.' });

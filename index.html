@@ -554,6 +554,37 @@
     .badge-rejected { background: #FEE2E2; color: #DC2626; }
     .badge-blocked { background: rgba(107,114,128,0.2); color: #9CA3AF; }
     .badge-cancelled { background: #FEE2E2; color: #DC2626; }
+    .badge-pengajuan { background: rgba(168, 85, 247, 0.15); color: #C084FC; }
+
+    /* Near-deadline alert row highlight */
+    tr.row-near-deadline { background: rgba(245, 158, 11, 0.08) !important; }
+    tr.row-near-deadline td:first-child { border-left: 3px solid #F59E0B; }
+    .deadline-alert-icon { color: #F59E0B; animation: pulseGlow 2s ease-in-out infinite; margin-right: 6px; }
+    @keyframes pulseGlow { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    /* Blocked item cross in barang dropdown */
+    .blocked-option { color: #9CA3AF !important; text-decoration: line-through; }
+
+    /* Deadline alert banner */
+    .deadline-banner {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(239, 68, 68, 0.08));
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      display: none;
+      animation: fadeIn 0.4s ease-out;
+    }
+    .deadline-banner.active { display: block; }
+    .deadline-banner h4 { color: #FBBF24; font-size: 0.95rem; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .deadline-banner ul { list-style: none; padding: 0; margin: 0; }
+    .deadline-banner li { color: var(--text-main); font-size: 0.85rem; padding: 4px 0; display: flex; align-items: center; gap: 8px; }
+    .deadline-banner li .dl-name { font-weight: 600; }
+    .deadline-banner li .dl-item { color: var(--text-muted); }
+    .deadline-banner li .dl-date { color: #F59E0B; font-weight: 600; font-size: 0.8rem; }
+    [data-theme="light"] .deadline-banner { background: linear-gradient(135deg, rgba(245, 158, 11, 0.06), rgba(239, 68, 68, 0.04)); }
+    [data-theme="light"] .deadline-banner h4 { color: #D97706; }
+    [data-theme="light"] .deadline-banner li .dl-date { color: #B45309; }
 
     /* Room classification colors */
     .room-studio { background: rgba(156,163,175,0.2); border-left: 3px solid #9CA3AF; color: #D1D5DB; }
@@ -935,6 +966,11 @@
 
       <!-- VIEW: DASHBOARD -->
       <div id="view-dashboard" class="view-section active">
+        <div class="deadline-banner" id="deadline-banner">
+          <h4><i class="fa-solid fa-bell"></i> Peringatan Masa Peminjaman Hampir Berakhir</h4>
+          <ul id="deadline-list"></ul>
+        </div>
+
         <div style="color: var(--text-muted); margin-bottom: 20px;">Berikut ringkasan aset BMN hari ini — <span id="dash-date"></span></div>
         
         <div class="stats-grid">
@@ -1072,6 +1108,9 @@
               </div>
             </div>
             <button class="btn btn-primary" onclick="submitPeminjaman()" style="width: 100%;">Ajukan Peminjaman</button>
+            <button class="btn btn-primary" id="btn-pengajuan-barang" onclick="submitPengajuanBarang()" style="width: 100%; margin-top: 12px; background: linear-gradient(135deg, #A855F7, #C084FC); display: none;">
+              <i class="fa-solid fa-paper-plane"></i> Ajukan Pengajuan Barang Baru
+            </button>
         </div>
       </div>
 
@@ -1193,6 +1232,7 @@
                 <option value="Ruangan" style="color: black;">Peminjaman Ruang</option>
                 <option value="Pengembalian" style="color: black;">Pengembalian</option>
                 <option value="Keluhan" style="color: black;">Lapor Keluhan</option>
+                <option value="Pengajuan" style="color: black;">Pengajuan Barang</option>
               </select>
               <button class="btn btn-secondary" style="width:auto; padding: 8px 16px; background: #EF4444;" onclick="downloadPDF()">
                 <i class="fa-solid fa-file-pdf"></i> Download PDF
@@ -1283,6 +1323,7 @@
                 <option value="Ruangan" style="color: black;">Peminjaman Ruang</option>
                 <option value="Pengembalian" style="color: black;">Pengembalian</option>
                 <option value="Keluhan" style="color: black;">Lapor Keluhan</option>
+                <option value="Pengajuan" style="color: black;">Pengajuan Barang</option>
               </select>
             </div>
             <div class="table-responsive">
@@ -1802,6 +1843,7 @@
       barangHtml += '<optgroup label="Lainnya"><option value="__custom__">✏️ Tulis barang lain...</option></optgroup>';
       document.getElementById('select-barang').innerHTML = barangHtml;
       window._allBarangOptions = barangHtml;
+      window._allBarangOriginal = allBarang; // Store original list for block checking
 
       let ruangHtml = '<option value="">Pilih Ruang...</option>';
       let totalRuang = 0;
@@ -1817,6 +1859,9 @@
 
       const res = await apiCall('getHistory', {});
       let db = (res && res.success) ? res.data : [];
+      
+      // Server-side blokir data
+      window._blokirList = (res && res.success && res.blokir) ? res.blokir : [];
       
       // Sort database descending by date
       db.sort((a, b) => parseIndonesianDate(b['Tanggal Pengajuan']) - parseIndonesianDate(a['Tanggal Pengajuan']));
@@ -1840,8 +1885,8 @@
           if (isActive) pendingCount++;
           if (row.Status === 'Terlambat') lateCount++;
           
-          let badgeClass = isPending ? 'badge-pending' : (isApproved ? 'badge-approved' : (isSelesai ? 'badge-selesai' : (isCancelled ? 'badge-cancelled' : (isBlocked ? 'badge-blocked' : 'badge-rejected'))));
-          let badgeLabel = isPending ? 'Menunggu' : (isApproved ? 'Disetujui' : (row.Status || '-'));
+          let badgeClass = isPending ? 'badge-pending' : (isApproved ? 'badge-approved' : (isSelesai ? 'badge-selesai' : (isCancelled ? 'badge-cancelled' : (isBlocked ? 'badge-blocked' : (row.tipe === 'Pengajuan' ? 'badge-pengajuan' : 'badge-rejected')))));
+          let badgeLabel = isPending ? 'Menunggu' : (isApproved ? 'Disetujui' : (row.tipe === 'Pengajuan' && isPending ? 'Pengajuan' : (row.Status || '-')));
           let rejectInfo = '';
           if (row.Status === 'Ditolak' && row['Alasan Penolakan']) {
             rejectInfo = `<br><span style="font-size:0.75rem; color:#F87171;">Alasan: ${row['Alasan Penolakan']}</span>`;
@@ -1854,12 +1899,14 @@
           else if (row.tipe === 'Ruangan') detailStr = `<strong>${row.Ruang || '-'}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Kegiatan: ${row.Acara || '-'}</span>`;
           else if (row.tipe === 'Pengembalian') detailStr = `<strong>${row.Barang || '-'}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Kondisi: ${row.Kondisi || '-'}</span>`;
           else if (row.tipe === 'Keluhan') detailStr = `<strong>${row.Barang || '-'}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">Masalah: ${row.Jenis || '-'}</span>`;
+          else if (row.tipe === 'Pengajuan') detailStr = `<strong>📋 ${row.Barang || '-'}</strong><br><span style="font-size:0.75rem; color:#C084FC;">Pengajuan Barang Baru | ${row.Tujuan || '-'}</span>`;
 
           let periodeStr = '';
           if (row.tipe === 'Barang') periodeStr = `${row['Tanggal Pinjam'] || '-'} s/d ${row['Tanggal Kembali'] || '-'}`;
           else if (row.tipe === 'Ruangan') periodeStr = `${row['Waktu Mulai'] || '-'} s/d ${row['Waktu Selesai'] || '-'}`;
           else if (row.tipe === 'Pengembalian') periodeStr = row['Tanggal Pengembalian'] || '-';
           else if (row.tipe === 'Keluhan') periodeStr = row['Tanggal Kejadian'] || '-';
+          else if (row.tipe === 'Pengajuan') periodeStr = `${row['Tanggal Pinjam'] || '-'} s/d ${row['Tanggal Kembali'] || '-'}`;
           
           let deleteBtn = '';
           if (currentUser.role === 'Admin') {
@@ -1955,6 +2002,84 @@
       document.getElementById('stat-pending').innerText = pendingCount;
       document.getElementById('stat-terlambat').innerText = lateCount;
       
+      // ===== NEAR-DEADLINE DETECTION =====
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const twoDaysLater = new Date(today);
+      twoDaysLater.setDate(twoDaysLater.getDate() + 2);
+      
+      let nearDeadlineItems = [];
+      db.forEach(row => {
+        if (row.tipe === 'Barang' && row.Status === 'Disetujui' && row['Tanggal Kembali']) {
+          const returnDate = new Date(row['Tanggal Kembali']);
+          returnDate.setHours(0,0,0,0);
+          const diffDays = Math.ceil((returnDate - today) / (1000 * 60 * 60 * 24));
+          if (diffDays <= 2 && diffDays >= 0) {
+            nearDeadlineItems.push({ ...row, daysLeft: diffDays });
+          }
+        }
+      });
+      
+      // Show deadline banner
+      const deadlineBanner = document.getElementById('deadline-banner');
+      const deadlineList = document.getElementById('deadline-list');
+      if (nearDeadlineItems.length > 0) {
+        deadlineBanner.classList.add('active');
+        deadlineList.innerHTML = nearDeadlineItems.map(item => {
+          const urgency = item.daysLeft === 0 ? '🔴 HARI INI!' : (item.daysLeft === 1 ? '🟠 Besok' : '🟡 2 hari lagi');
+          return `<li>
+            <i class="fa-solid fa-clock deadline-alert-icon"></i>
+            <span class="dl-name">${item.Nama}</span>
+            <span class="dl-item">— ${item.Barang}</span>
+            <span class="dl-date">${urgency} (${item['Tanggal Kembali']})</span>
+          </li>`;
+        }).join('');
+        
+        // Sort near-deadline items to TOP of dashboard
+        const nearDeadlineNIPs = new Set(nearDeadlineItems.map(i => i.NIP + i.Barang));
+        dashboardObjects.sort((a, b) => {
+          // Extract from html - check if this is a near-deadline row
+          const aKey = (a.nama || '') + (a.barang || '');
+          const bKey = (b.nama || '') + (b.barang || '');
+          return 0; // Keep existing sort, we'll prepend near-deadline items
+        });
+      } else {
+        deadlineBanner.classList.remove('active');
+        deadlineList.innerHTML = '';
+      }
+      
+      // ===== BLOCKED ITEMS IN DROPDOWNS =====
+      const blockedBarangNames = window._blokirList.filter(b => b.Tipe === 'Barang').map(b => b.Aset);
+      const blockedRuangNames = window._blokirList.filter(b => b.Tipe === 'Ruangan').map(b => b.Aset);
+      
+      // Update barang dropdown - mark blocked items
+      if (blockedBarangNames.length > 0) {
+        const selBarang = document.getElementById('select-barang');
+        selBarang.querySelectorAll('option').forEach(opt => {
+          if (blockedBarangNames.includes(opt.value)) {
+            opt.textContent = '❌ ' + opt.value + ' (Diblokir/Maintenance)';
+            opt.disabled = true;
+            opt.style.color = '#9CA3AF';
+            opt.style.textDecoration = 'line-through';
+          }
+        });
+        // Update stored options
+        window._allBarangOptions = selBarang.innerHTML;
+      }
+      
+      // Update ruang dropdown - mark blocked rooms
+      if (blockedRuangNames.length > 0) {
+        const selRuang = document.getElementById('select-ruang');
+        selRuang.querySelectorAll('option').forEach(opt => {
+          if (blockedRuangNames.includes(opt.value)) {
+            opt.textContent = '❌ ' + opt.value + ' (Diblokir/Maintenance)';
+            opt.disabled = true;
+            opt.style.color = '#9CA3AF';
+            opt.style.textDecoration = 'line-through';
+          }
+        });
+      }
+
       // Store arrays for paginated rendering
       window._dashboardObjects = dashboardObjects;
       window._dashboardRiwayatArr = dashboardRiwayatArr;
@@ -1968,6 +2093,7 @@
       if (document.getElementById('view-pengembalian').classList.contains('active')) renderPengembalianList();
       if (document.getElementById('view-keluhan').classList.contains('active')) renderKeluhanList();
       if (document.getElementById('view-penyewaan').classList.contains('active')) renderCalendar();
+      if (document.getElementById('view-blokir').classList.contains('active')) renderBlokirList();
       
       document.querySelector('#table-verifikasi tbody').innerHTML = verifikasiHtml;
     }
@@ -2145,7 +2271,41 @@
     function toggleCustomBarang() {
       const sel = document.getElementById('select-barang');
       const grp = document.getElementById('custom-barang-group');
-      if (sel.value === '__custom__') { grp.style.display = 'block'; } else { grp.style.display = 'none'; }
+      const pengajuanBtn = document.getElementById('btn-pengajuan-barang');
+      if (sel.value === '__custom__') { 
+        grp.style.display = 'block'; 
+        if (pengajuanBtn) pengajuanBtn.style.display = 'block';
+      } else { 
+        grp.style.display = 'none'; 
+        if (pengajuanBtn) pengajuanBtn.style.display = 'none';
+      }
+    }
+
+    // Submit Pengajuan Barang Baru (separate sheet)
+    async function submitPengajuanBarang() {
+      const nama = document.getElementById('peminjaman-nama').value;
+      const nipPemohon = document.getElementById('peminjaman-nip').value;
+      const brg = document.getElementById('custom-barang').value.trim();
+      const tuju = document.getElementById('tujuan-pinjam').value;
+      const tglP = document.getElementById('tgl-pinjam').value;
+      const tglK = document.getElementById('tgl-kembali').value;
+
+      if (!nama || !nipPemohon || !brg || !tglP || !tglK) return showAlert('alert-peminjaman', 'Semua field wajib diisi untuk pengajuan barang!', 'error');
+
+      const payload = { type: "pengajuan", data: { "NIP": nipPemohon, "Nama": nama, "Barang": brg, "Tujuan": tuju, "Tanggal Pinjam": tglP, "Tanggal Kembali": tglK } };
+      
+      apiCall('submitForm', payload).then(res => {
+        if(res && res.success) loadDashboardData();
+      });
+      
+      showModal('PENGAJUAN TERKIRIM!', `Pengajuan barang "${brg}" berhasil dikirim!\n\nBarang ini akan ditinjau oleh Pengelola BMN. Pencatatan pengajuan ini terpisah dari peminjaman reguler.`, 'success');
+      document.getElementById('peminjaman-nama').value = '';
+      document.getElementById('peminjaman-nip').value = '';
+      document.getElementById('custom-barang').value = '';
+      document.getElementById('custom-barang-group').style.display = 'none';
+      document.getElementById('btn-pengajuan-barang').style.display = 'none';
+      document.getElementById('select-barang').value = '';
+      switchView('dashboard');
     }
 
     // Rejection modal
@@ -2609,43 +2769,48 @@
       if (!tipe || !aset || !alasan) { showModal('GAGAL', 'Semua field wajib diisi!', 'error'); return; }
       
       // Check if already blocked
-      if (window._blokirList.find(b => b.aset === aset)) { showModal('INFO', 'Aset ini sudah diblokir.', 'info'); return; }
+      if (window._blokirList.find(b => b.Aset === aset)) { showModal('INFO', 'Aset ini sudah diblokir.', 'info'); return; }
       
-      window._blokirList.push({ tipe, aset, alasan, tanggal: new Date().toLocaleDateString('id-ID') });
-      localStorage.setItem('simba_blokir', JSON.stringify(window._blokirList));
-      
-      showModal('BERHASIL!', `${aset} berhasil diblokir untuk maintenance.`, 'success');
-      document.getElementById('blokir-tipe').value = '';
-      document.getElementById('blokir-aset').innerHTML = '<option value="">Pilih aset...</option>';
-      document.getElementById('blokir-alasan').value = '';
-      renderBlokirList();
-      loadDashboardData(); // Refresh to update blocked items in dropdowns
+      apiCall('addBlokir', { tipe, aset, alasan, user: currentUser ? currentUser.NIP : '-' }).then(res => {
+        if(res && res.success) {
+          showModal('BERHASIL!', `${aset} berhasil diblokir untuk maintenance.`, 'success');
+          document.getElementById('blokir-tipe').value = '';
+          document.getElementById('blokir-aset').innerHTML = '<option value="">Pilih aset...</option>';
+          document.getElementById('blokir-alasan').value = '';
+          loadDashboardData();
+        } else {
+          showModal('GAGAL', res.message || 'Gagal memblokir aset.', 'error');
+        }
+      });
     }
 
-    function unblokir(index) {
+    function unblokir(rowIndex) {
       if (!confirm('Apakah Anda yakin ingin membuka blokir aset ini?')) return;
-      window._blokirList.splice(index, 1);
-      localStorage.setItem('simba_blokir', JSON.stringify(window._blokirList));
-      showModal('DIBUKA!', 'Blokir aset telah dicabut.', 'success');
-      renderBlokirList();
-      loadDashboardData();
+      apiCall('removeBlokir', { rowIndex }).then(res => {
+        if(res && res.success) {
+          showModal('DIBUKA!', 'Blokir aset telah dicabut.', 'success');
+          loadDashboardData();
+        } else {
+          showModal('GAGAL', res.message || 'Gagal membuka blokir.', 'error');
+        }
+      });
     }
 
     function renderBlokirList() {
       const tbody = document.querySelector('#table-blokir tbody');
       if (!tbody) return;
-      if (window._blokirList.length === 0) {
+      if (!window._blokirList || window._blokirList.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tidak ada aset yang diblokir</td></tr>';
         return;
       }
       let html = '';
-      window._blokirList.forEach((b, i) => {
+      window._blokirList.forEach(b => {
         html += `<tr>
-          <td><span style="background:rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">${b.tipe}</span></td>
-          <td><strong>${b.aset}</strong></td>
-          <td style="font-size:0.85rem;">${b.alasan}</td>
-          <td style="font-size:0.85rem;">${b.tanggal}</td>
-          <td><button class="btn btn-primary" style="padding:4px 12px; font-size:0.8rem; width:auto; background:#10B981;" onclick="unblokir(${i})">🔓 Buka Blokir</button></td>
+          <td><span style="background:rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">${b.Tipe}</span></td>
+          <td><strong>${b.Aset}</strong></td>
+          <td style="font-size:0.85rem;">${b.Alasan}</td>
+          <td style="font-size:0.85rem;">${b['Tanggal Blokir']}</td>
+          <td><button class="btn btn-primary" style="padding:4px 12px; font-size:0.8rem; width:auto; background:#10B981;" onclick="unblokir(${b._rowIndex})">🔓 Buka Blokir</button></td>
         </tr>`;
       });
       tbody.innerHTML = html;
